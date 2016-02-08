@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.3)
+project(Generic\ Shooter\ Game)
+
+set(CMAKE_CXX_COMPILER "clang++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+
+set(SOURCE_FILES
+    src/main.cpp
+    src/manager/environment.cpp src/manager/environment.hpp
+	src/manager/service.cpp src/manager/service.hpp
+	src/manager/system.cpp src/manager/system.hpp
+	src/service/window_gl.cpp src/service/window_gl.hpp
+	src/log/log.cpp src/log/log.hpp
+	src/gl/gl.cpp src/gl/gl.hpp
+)
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GL REQUIRED gl)
+
+include_directories(../sol/src)
+add_executable(GSG ${SOURCE_FILES})
+target_link_libraries(GSG boost_program_options boost_filesystem boost_system glfw Sol ${GL_LIBRARIES})
+add_definitions(-D_DEBUG)

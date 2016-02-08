@@ -1,0 +1,4 @@
+build/
+resources/
+.clang_complete
+*.log
