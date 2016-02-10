@@ -37,7 +37,9 @@ public:
 	Streamer(Streamer const&) = delete;
 	Streamer operator=(Streamer const&) = delete;
 
-	Streamer(Streamer&&) = default;
+    // allow moving the streamer
+    Streamer(Streamer&&) = default;
+    Streamer& operator=(Streamer&&) = default;
 
 	Streamer& operator<<(std::string const&);
 	Streamer& operator<<(char const*);

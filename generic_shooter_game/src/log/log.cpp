@@ -60,18 +60,6 @@ void gsg::log::init(Environment const& env, Level max) {
 	info("Logger") << "Initialized logger module.\n";
 }
 
-static void outfunc(std::string const& s) {
-	STREAMS.lock();
-
-	std::cout << s;
-	std::cout.flush();
-
-	LOG_FILE_OUT << s;
-	LOG_FILE_OUT.flush();
-
-	STREAMS.unlock();
-}
-
 static inline std::string header(gsg::log::Level lvl, std::string const& module, std::string const& part) {
 	time_t time;
 	std::time(&time);
@@ -128,7 +116,17 @@ sol::Streamer gsg::log::log(Level lvl, std::string const& module, std::string co
 	assert(INITIALIZED);
 
 	if (lvl <= MAX_LEVEL) {
-		sol::Streamer stream(outfunc);
+        sol::Streamer stream([](std::string const& s){
+            STREAMS.lock();
+
+            std::cout << s;
+            std::cout.flush();
+
+            LOG_FILE_OUT << s;
+            LOG_FILE_OUT.flush();
+
+            STREAMS.unlock();
+        });
 		stream << header(lvl, module, part);
 		return stream;
 	}

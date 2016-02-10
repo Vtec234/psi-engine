@@ -22,10 +22,11 @@
 
 
 sol::Streamer::Streamer(std::function<void(std::string const&)> out)
-	: m_out(out) {}
+    : m_out(out) {}
 
 sol::Streamer::~Streamer() {
-	m_out(m_buffer);
+    if (m_out)
+        m_out(m_buffer);
 }
 
 sol::Streamer& sol::Streamer::operator<<(std::string const& s) {

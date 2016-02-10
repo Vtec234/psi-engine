@@ -1,4 +1,6 @@
 build/
 resources/
 .clang_complete
+.ycm_extra_conf.*
+*.user
 *.log
