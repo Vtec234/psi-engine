@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.3)
 project(Sol)
 
 set(CMAKE_CXX_COMPILER "clang++")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 
 set(SOURCE_FILES
-	src/stream/streamer.cpp src/stream/streamer.hpp
-    src/service_resource.hpp
-    src/service_window.hpp
-    src/system.hpp
+	src/io/streamer.cpp src/io/streamer.hpp
+	src/scene/system.hpp
+	src/service/resource.hpp
+	src/service/window.hpp
+	src/task/submitter.hpp
 )
 
 add_library(Sol STATIC ${SOURCE_FILES})

@@ -80,7 +80,7 @@ static GLvoid APIENTRY gl_error_callback(GLenum source, GLenum type, GLuint id, 
 		gsg::log::debug("OpenGL") << msg << "\n";
 }
 
-std::unique_ptr<sol::WindowService> gsg::GLWindowService::start_gl_window_service(GLWindowServiceArgs args) {
+std::unique_ptr<sol::IWindowService> gsg::GLWindowService::start_gl_window_service(GLWindowServiceArgs args) {
 	// -- START GLFW --
 	if (glfwInit() == 0)
 		throw std::runtime_error("Failed to initialize GLFW.");
@@ -163,7 +163,7 @@ std::unique_ptr<sol::WindowService> gsg::GLWindowService::start_gl_window_servic
 	log::info("GLWindowService") << "Initialized OpenGL Core " << gl::sys::GetMajorVersion() << "." << gl::sys::GetMinorVersion() << "\n";
 
 	// -- RETURN SERVICE --
-	return std::unique_ptr<WindowService>(service);
+	return std::unique_ptr<sol::IWindowService>(service);
 }
 
 gsg::GLWindowService::GLWindowService(GLFWwindow* win)

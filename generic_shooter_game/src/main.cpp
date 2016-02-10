@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 		640,
 		480,
 		8,
-		"Ultra Window",
+		"UltraWindow3600-K Ultimate Edition Beta v.2.5.7",
 		true,
 		true,
 		true,
@@ -56,19 +56,7 @@ int main(int argc, char** argv) {
 
     let mut systems = manager::SystemManager::new();
     let mut services = manager::ServiceManager::<resource::UniversalResourceLoader, window::WindowGl>::new();
-    let window = match window::WindowGl::new(window::WindowGlArgs{
-        width: 800,
-        height: 600,
-        samples: 2,
-        title: "UltraWindow3600-K Ultimate Edition Beta v.2.5.7",
-        resizable: true,
-        always_on_top: false,
-        debug: false,
-        fullscreen: false,
-    }) {
-        Ok(w) => w,
-        Err(e) => panic!(e),
-    };
+	
     let resources = match resource::UniversalResourceLoader::new(resource::ResourceServiceArgs{
         resource_path: environment.resource_dir(),
         tasks: &tasks,

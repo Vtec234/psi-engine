@@ -23,13 +23,14 @@
 #include <memory>
 #include <atomic>
 
-#include <service_window.hpp>
+#include <service/window.hpp>
 
 
 typedef struct GLFWwindow GLFWwindow;
 
 
 namespace gsg {
+/// The arguments required to start a GLWindowService instance.
 struct GLWindowServiceArgs {
 	uint16_t width;
 	uint16_t height;
@@ -44,14 +45,15 @@ struct GLWindowServiceArgs {
 	bool debug;
 };
 
-class GLWindowService : public sol::WindowService {
+/// A class managing a GLFW window with an OpenGL rendering context.
+class GLWindowService : public sol::IWindowService {
 public:
 	~GLWindowService();
 
 	/// Starts the service and spawns a window.
 	/// Might throw an exception or two.
 	/// Shouldn't probably be called more than once - might bork.
-	static std::unique_ptr<sol::WindowService> start_gl_window_service(GLWindowServiceArgs);
+	static std::unique_ptr<sol::IWindowService> start_gl_window_service(GLWindowServiceArgs);
 
 	void update_window() override;
 	void set_mouse_block(bool) override;
@@ -76,4 +78,4 @@ private:
 	std::atomic<int> m_framebuffer_width;
 	std::atomic<int> m_framebuffer_height;
 };
-}
+} // namespace gsg

@@ -26,6 +26,7 @@
 
 
 namespace sol {
+/// A class which stores all the input in an internal buffer and outputs it to the given function on destruction.
 class Streamer {
 public:
 	explicit Streamer(std::function<void(std::string const&)> out);

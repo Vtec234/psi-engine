@@ -24,7 +24,8 @@
 
 
 namespace sol {
-class WindowService {
+/// A service which manages a window and all the related events.
+class IWindowService {
 public:
     /// Polls window events and swaps frame buffers.
     virtual void update_window() = 0;

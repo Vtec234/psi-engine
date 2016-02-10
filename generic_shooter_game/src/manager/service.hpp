@@ -22,25 +22,23 @@
 
 #include <memory>
 
-#include <service_resource.hpp>
-#include <service_window.hpp>
+#include <service/resource.hpp>
+#include <service/window.hpp>
 
 
 namespace gsg {
-// TODO maybe move this to compile-time dispatch with templates
-// template <typename Res, typename Win>
 class ServiceManager {
 public:
 	ServiceManager();
 
-	void set_resource_service(std::unique_ptr<sol::ResourceService>);
-	void set_window_service(std::unique_ptr<sol::WindowService>);
+	void set_resource_service(std::unique_ptr<sol::IResourceService>);
+	void set_window_service(std::unique_ptr<sol::IWindowService>);
 
-	sol::ResourceService& resource_service() const;
-	sol::WindowService& window_service() const;
+	sol::IResourceService const& resource_service() const;
+	sol::IWindowService const& window_service() const;
 
 private:
-	std::unique_ptr<sol::ResourceService> m_resource;
-	std::unique_ptr<sol::WindowService> m_window;
+	std::unique_ptr<sol::IResourceService> m_resource;
+	std::unique_ptr<sol::IWindowService> m_window;
 };
-}
+} // namespace gsg

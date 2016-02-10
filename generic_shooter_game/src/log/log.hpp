@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include <stream/streamer.hpp>
+#include <io/streamer.hpp>
 
 #include "../manager/environment.hpp"
 
@@ -65,5 +65,5 @@ namespace log {
 	inline sol::Streamer debug(std::string const& module = "", std::string const& part = "") {
 		return log(LEVEL_DEBUG, module, part);
 	}
-}
-}
+} // namespace log
+} // namespace gsg

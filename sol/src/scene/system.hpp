@@ -24,9 +24,9 @@
 
 
 namespace sol {
-/// TODO this class
-/// TODO replace void* with Scene*
-class System {
+// TODO replace void* with Scene*
+// TODO this class
+class ISystem {
 public:
     virtual uint64_t required_components() const = 0;
     virtual void on_scene_loaded(void*) const = 0;

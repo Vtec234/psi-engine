@@ -25,17 +25,18 @@ gsg::ServiceManager::ServiceManager()
 	: m_resource()
 	, m_window() {}
 
-void gsg::ServiceManager::set_resource_service(std::unique_ptr<sol::ResourceService> ptr) {
+void gsg::ServiceManager::set_resource_service(std::unique_ptr<sol::IResourceService> ptr) {
 	m_resource = std::move(ptr);
 }
-void gsg::ServiceManager::set_window_service(std::unique_ptr<sol::WindowService> ptr) {
+
+void gsg::ServiceManager::set_window_service(std::unique_ptr<sol::IWindowService> ptr) {
 	m_window = std::move(ptr);
 }
 
-sol::ResourceService& gsg::ServiceManager::resource_service() const {
+sol::IResourceService const& gsg::ServiceManager::resource_service() const {
 	return *m_resource;
 }
 
-sol::WindowService& gsg::ServiceManager::window_service() const {
+sol::IWindowService const& gsg::ServiceManager::window_service() const {
 	return *m_window;
 }
