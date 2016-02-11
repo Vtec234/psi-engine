@@ -23,6 +23,8 @@
 #include "manager/environment.hpp"
 #include "log/log.hpp"
 #include "service/window_gl.hpp"
+#include "service/resource.hpp"
+#include "task/manager.hpp"
 
 
 int main(int argc, char** argv) {
@@ -32,7 +34,14 @@ int main(int argc, char** argv) {
 
 	gsg::log::init(env, gsg::log::LEVEL_DEBUG);
 
-	auto window = gsg::GLWindowService::start_gl_window_service(gsg::GLWindowServiceArgs{
+	gsg::TaskManager task_manager;
+
+	auto resource_service = gsg::ResourceLoader::start_resource_loader(gsg::ResourceLoaderArgs{
+		&task_manager,
+		env.resource_dir,
+	});
+
+	auto window_service = gsg::GLWindowService::start_gl_window_service(gsg::GLWindowServiceArgs{
 		640,
 		480,
 		8,
@@ -43,8 +52,8 @@ int main(int argc, char** argv) {
 	});
 
 	// TODO cap FPS
-	while(!window->should_close()) {
-		window->update_window();
+	while(!window_service->should_close()) {
+		window_service->update_window();
 	}
 
 	return 0;

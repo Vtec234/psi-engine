@@ -103,6 +103,8 @@ gsg::ResourceLoader::ResourceLoader(sol::ITaskSubmitter* tasks, fs::path dir)
 
 std::unique_ptr<sol::IResourceService> gsg::ResourceLoader::start_resource_loader(ResourceLoaderArgs args) {
 	auto loader = new ResourceLoader(args.task_submitter, args.resource_dir);
+
+	gsg::log::info("ResourceLoader") << "Initialized the ResourceLoader service successfully.\n";
 	return std::unique_ptr<sol::IResourceService>(loader);
 }
 

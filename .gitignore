@@ -4,3 +4,4 @@ resources/
 .ycm_extra_conf.*
 *.user
 *.log
+lldb-nvim.json

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 project(Generic\ Shooter\ Game)
 
 set(CMAKE_CXX_COMPILER "clang++")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -g -Wall")
 
 set(SOURCE_FILES
 	src/gl/gl.cpp src/gl/gl.hpp
@@ -12,6 +12,7 @@ set(SOURCE_FILES
 	src/manager/system.cpp src/manager/system.hpp
 	src/service/resource.cpp src/service/resource.hpp
 	src/service/window_gl.cpp src/service/window_gl.hpp
+	src/task/manager.cpp src/task/manager.hpp
     src/main.cpp
 )
 
