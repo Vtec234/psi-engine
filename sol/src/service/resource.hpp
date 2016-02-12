@@ -44,34 +44,36 @@ class IResource {
 public:
 	virtual ~IResource() {};
 
-	virtual std::unique_ptr<IResource> copy() const = 0;
+	virtual std::unique_ptr<IResource> clone() const = 0;
 };
 
 /// An abstract class representing a read-lock on a resource.
+/// Destroying this object releases the lock and allows potential modifications to the resource.
 class IResourceLock {
 public:
     virtual ~IResourceLock() {};
 
-    virtual IResource const* resource() const = 0;
+    virtual IResource const& resource() const = 0;
 };
 
 /// A thread-safe service which loads and manages resources.
 class IResourceService {
 public:
-    /// Hashes the given string with the same algorithm with which resource names are hashed.
-	/// @return The hash value.
-    virtual size_t hash_string(std::string const&) const = 0;
     /// Requests a resource to be loaded.
-	/// @return Loading if loading began. Unavailable if file with given name does not exist.
-    virtual ResourceState request_resource(std::string const&, std::function<std::unique_ptr<IResource>(std::string const)>) const = 0;
+	/// @throw When input is invalid or loading is otherwise prevented.
+	/// @return Loading if loading began. Available if index is already in use.
+	virtual ResourceState request_resource(size_t, std::function<std::unique_ptr<IResource>()>) const = 0;
+
     /// Waits until the resource finishes loading.
 	/// @return A read-lock on the resource or empty optional if resource is not currently Loading/Available.
 	virtual boost::optional<std::unique_ptr<IResourceLock>> wait_for_resource(size_t) const = 0;
+
 	/// Queries the state of the resource.
 	/// @return The queried state.
     virtual ResourceState resource_state(size_t) const = 0;
-	/// Frees the resource if it is Available. Stops loading and frees it if it is Loading.
-	/// @return Whether the free was successful.
-    virtual bool free_resource(size_t) const = 0;
+
+	/// Frees the resource if it is Available. Stops loading and frees it if it is Loading. Blocks.
+	/// @return What the state was before freeing.
+    virtual ResourceState free_resource(size_t) const = 0;
 };
 } // namespace sol

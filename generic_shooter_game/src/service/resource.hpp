@@ -26,8 +26,6 @@
 
 #include <tbb/concurrent_hash_map.h>
 
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
 
 #include <task/submitter.hpp>
 #include <service/resource.hpp>
@@ -37,7 +35,6 @@ namespace gsg {
 /// Arguments required to start the ResourceLoader service.
 struct ResourceLoaderArgs {
 	sol::ITaskSubmitter* task_submitter;
-	fs::path resource_dir;
 };
 
 class ResourceLoader : public sol::IResourceService {
@@ -73,32 +70,29 @@ class ResourceLoader : public sol::IResourceService {
 
 	class ResourceLock : public sol::IResourceLock {
 	public:
-		ResourceLock(const_accessor*);
+		explicit ResourceLock(std::unique_ptr<const_accessor>&&);
 		virtual ~ResourceLock();
-		sol::IResource const* resource() const override;
+		sol::IResource const& resource() const override;
 
 	private:
-		const_accessor m_access;
+		std::unique_ptr<const_accessor> m_access;
 	};
 
 public:
 	static std::unique_ptr<sol::IResourceService> start_resource_loader(ResourceLoaderArgs);
 
-	size_t hash_string(std::string const&) const override;
-
-	sol::ResourceState request_resource(std::string const&, std::function<std::unique_ptr<sol::IResource>(std::string const)>) const override;
+	sol::ResourceState request_resource(size_t, std::function<std::unique_ptr<sol::IResource>()>) const override;
 
 	boost::optional<std::unique_ptr<sol::IResourceLock>> wait_for_resource(size_t) const override;
 
 	sol::ResourceState resource_state(size_t) const override;
 
-	bool free_resource(size_t) const override;
+	sol::ResourceState free_resource(size_t) const override;
 
 private:
-	ResourceLoader(sol::ITaskSubmitter*, fs::path);
+	ResourceLoader(sol::ITaskSubmitter*);
 
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
 	sol::ITaskSubmitter const* m_task_submitter;
-	fs::path const m_resource_dir;
 };
 } // namespace gsg

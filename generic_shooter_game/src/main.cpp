@@ -18,13 +18,17 @@
  *
  */
 
-#include <iostream>
+#include <array>
+#include <string>
+
+#include <file/load.hpp>
 
 #include "manager/environment.hpp"
 #include "log/log.hpp"
 #include "service/window_gl.hpp"
 #include "service/resource.hpp"
 #include "task/manager.hpp"
+#include "resource/glsl_source.hpp"
 
 
 int main(int argc, char** argv) {
@@ -38,8 +42,26 @@ int main(int argc, char** argv) {
 
 	auto resource_service = gsg::ResourceLoader::start_resource_loader(gsg::ResourceLoaderArgs{
 		&task_manager,
-		env.resource_dir,
 	});
+	
+
+    try {
+		auto status = resource_service->request_resource(
+			std::hash<std::string>()("/glsl/box.vert"),
+			[&]() {
+				std::array<std::vector<std::string>, 6> srcs;
+				
+				srcs[0] = sol::file::load_text(env.resource_dir.string() + "/glsl/box.vert");
+				srcs[1] = sol::file::load_text(env.resource_dir.string() + "/glsl/box.frag");
+				
+				return gsg::GLSLSource::construct_from_sources(srcs);
+			}
+		);
+    }
+	catch (std::exception const& e) {
+		gsg::log::error("main") << e.what() << "\n";
+		return 1;
+	}
 
 	auto window_service = gsg::GLWindowService::start_gl_window_service(gsg::GLWindowServiceArgs{
 		640,

@@ -167,7 +167,8 @@ std::unique_ptr<sol::IWindowService> gsg::GLWindowService::start_gl_window_servi
 }
 
 gsg::GLWindowService::GLWindowService(GLFWwindow* win)
- 	: m_window(win) {}
+	: m_window(win)
+	, m_should_close(false) {}
 
 gsg::GLWindowService::~GLWindowService() {
 	glfwDestroyWindow(m_window);

@@ -5,11 +5,13 @@ set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -g -Wall")
 
 set(SOURCE_FILES
+	src/data/parse.cpp src/data/parse.hpp
 	src/gl/gl.cpp src/gl/gl.hpp
 	src/log/log.cpp src/log/log.hpp
     src/manager/environment.cpp src/manager/environment.hpp
 	src/manager/service.cpp src/manager/service.hpp
 	src/manager/system.cpp src/manager/system.hpp
+	src/resource/glsl_source.cpp src/resource/glsl_source.hpp
 	src/service/resource.cpp src/service/resource.hpp
 	src/service/window_gl.cpp src/service/window_gl.hpp
 	src/task/manager.cpp src/task/manager.hpp
