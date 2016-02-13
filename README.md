@@ -1,6 +1,6 @@
 # Psi Engine
 ### Goals:
-- Build a multithreaded game engine conforming in is general architecture to https://software.intel.com/en-us/articles/designing-the-framework-of-a-parallel-game-engine/
+- Build a multithreaded game engine conforming in its general architecture to https://software.intel.com/en-us/articles/designing-the-framework-of-a-parallel-game-engine/
 
 ### Components:
 ###### Sol Library
@@ -10,8 +10,8 @@ A collection of (mostly abstract) classes and methods that can be reused in vari
 A generic shooter game. Doesn't render anything yet. [WIP]
 
 ### Dependencies:
-- CMake >= 3.3
-- Boost >= 1.60
+- CMake >= 3.3.0
+- Boost >= 1.60.0
 - GLFW >= 3.1.2
 
 ### Building:
