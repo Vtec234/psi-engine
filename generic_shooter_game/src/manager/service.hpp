@@ -27,6 +27,11 @@
 
 
 namespace gsg {
+/// A manager for objects implements I..Service interfaces.
+/// The point of this manager is that a I..Service const& can safely be passed to any thread.
+/// A requirement for I..Service implementations is that each const function be safe
+/// with respect to other const functions, as well as non-const ones.
+/// Only non-const functions can be called solely by a single thread.
 class ServiceManager {
 public:
 	ServiceManager();
@@ -36,6 +41,9 @@ public:
 
 	sol::IResourceService const& resource_service() const;
 	sol::IWindowService const& window_service() const;
+
+	sol::IResourceService& resource_service();
+	sol::IWindowService& window_service();
 
 private:
 	std::unique_ptr<sol::IResourceService> m_resource;

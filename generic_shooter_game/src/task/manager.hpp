@@ -31,5 +31,8 @@ public:
 	bool wait_for_task(uint64_t) const override;
 
 	bool is_task_running(uint64_t) const override;
+
+private:
+
 };
 } // namespace gsg

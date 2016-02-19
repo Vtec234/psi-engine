@@ -90,7 +90,7 @@ std::string gsg::GLSLSource::uniform_type(UniformMapping map) {
 
 std::unique_ptr<sol::IResource> gsg::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
 	auto obj = std::make_unique<GLSLSource>();
-	
+
 	// idea was to require #type, but now it seems to rigid
 	// ie one file can't be used as two types of shader
 	//std::regex const type_rgx("\\s*#type\\s*((frag)|(vert)|(geom)|(tess_ctrl)|(tess_eval)|(comp))(?=\\s*\\n)");
@@ -221,7 +221,7 @@ std::unique_ptr<sol::IResource> gsg::GLSLSource::construct_from_sources(std::arr
 			}
 		}
 	}
-	
+
 	sol::IResource* p = obj.release();
 	return std::unique_ptr<sol::IResource>(p);
 }

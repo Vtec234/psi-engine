@@ -40,3 +40,11 @@ sol::IResourceService const& gsg::ServiceManager::resource_service() const {
 sol::IWindowService const& gsg::ServiceManager::window_service() const {
 	return *m_window;
 }
+
+sol::IResourceService& gsg::ServiceManager::resource_service() {
+	return *m_resource;
+}
+
+sol::IWindowService& gsg::ServiceManager::window_service() {
+	return *m_window;
+}

@@ -26,7 +26,6 @@
 
 #include <tbb/concurrent_hash_map.h>
 
-
 #include <task/submitter.hpp>
 #include <service/resource.hpp>
 
