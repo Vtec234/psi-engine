@@ -20,12 +20,20 @@
 
 #pragma once
 
+#include <scene/system.hpp>
+
 
 namespace gsg {
 class SystemManager {
-
-
-
-
+public:
+	// dispatch system starters
+	// init world
+	// dispatch system scene initializers
+	// dispatch system scene updates
+	// sync updates
+	// repeat
+	// dispatch system scene savers
+	// close
+	// repeat
 };
 } // namespace gsg

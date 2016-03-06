@@ -22,16 +22,19 @@
 
 #include <cstdint>
 
+#include "scene.hpp"
+
 
 namespace sol {
-// TODO replace void* with Scene*
-// TODO this class
 class ISystem {
 public:
+	/// Bitmask of SceneComponentType. Only the required types will be provided to the system.
     virtual uint64_t required_components() const = 0;
-    virtual void on_scene_loaded(void*) const = 0;
-    virtual void on_scene_update(void*) const = 0;
-    virtual void on_scene_save(void* scene, void* mem) const = 0;
-    virtual void on_scene_shutdown(void*) const = 0;
+
+	/// Functions called at various moments of a scene's lifetime.
+    virtual void on_scene_loaded(ISceneDirectAccess) = 0;
+    virtual void on_scene_update(ISceneDirectAccess) = 0;
+    virtual void on_scene_save(ISceneDirectAccess, void* replace_with_save_file) = 0;
+    virtual void on_scene_shutdown(ISceneDirectAccess) = 0;
 };
 } // namespace sol
