@@ -21,15 +21,16 @@
 #include <array>
 #include <string>
 
-#include <file/load.hpp>
+#include <log/log.hpp>
+#include <thread/impl/manager.hpp>
+#include <service/manager.hpp>
+#include <service/impl/resource.hpp>
+#include <util/file.hpp>
+#include <service/impl/glsl_source.hpp>
+#include <service/impl/window_gl.hpp>
+#include <system/manager.hpp>
 
-#include "log/log.hpp"
-#include "manager/environment.hpp"
-#include "manager/service.hpp"
-#include "resource/glsl_source.hpp"
-#include "service/window_gl.hpp"
-#include "service/resource.hpp"
-#include "task/manager.hpp"
+#include "env/environment.hpp"
 
 
 int main(int argc, char** argv) {
@@ -37,12 +38,12 @@ int main(int argc, char** argv) {
 	if (!gsg::parse_command_line(argc, argv, env))
 		return 0;
 
-	gsg::log::init(env, gsg::log::LEVEL_DEBUG);
+	psi_log::init(env.working_dir, psi_log::LEVEL_DEBUG);
 
-	gsg::TaskManager task_manager;
+	psi_thread::TaskManager task_manager;
 
-	gsg::ServiceManager services;
-	services.set_resource_service(gsg::ResourceLoader::start_resource_loader(gsg::ResourceLoaderArgs{
+	psi_serv::ServiceManager services;
+	services.set_resource_service(psi_serv::ResourceLoader::start_resource_loader(psi_serv::ResourceLoaderArgs{
 		&task_manager,
 	}));
 
@@ -52,19 +53,19 @@ int main(int argc, char** argv) {
 			[&]() {
 				std::array<std::vector<std::string>, 6> srcs;
 
-				srcs[0] = sol::file::load_text(env.resource_dir.string() + "/glsl/box.vert");
-				srcs[1] = sol::file::load_text(env.resource_dir.string() + "/glsl/box.frag");
+				srcs[0] = psi_util::load_text(env.resource_dir.string() + "/glsl/box.vert");
+				srcs[1] = psi_util::load_text(env.resource_dir.string() + "/glsl/box.frag");
 
-				return gsg::GLSLSource::construct_from_sources(srcs);
+				return psi_serv::GLSLSource::construct_from_sources(srcs);
 			}
 		);
 	}
 	catch (std::exception const& e) {
-		gsg::log::error("main") << e.what() << "\n";
+		psi_log::error("main") << e.what() << "\n";
 		return 1;
 	}
 
-	services.set_window_service(gsg::GLWindowService::start_gl_window_service(gsg::GLWindowServiceArgs{
+	services.set_window_service(psi_serv::GLWindowService::start_gl_window_service(psi_serv::GLWindowServiceArgs{
 		640,
 		480,
 		8,
