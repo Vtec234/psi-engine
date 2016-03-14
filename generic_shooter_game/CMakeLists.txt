@@ -14,6 +14,7 @@ set(SOURCE_FILES
 	src/resource/glsl_source.cpp src/resource/glsl_source.hpp
 	src/service/resource.cpp src/service/resource.hpp
 	src/service/window_gl.cpp src/service/window_gl.hpp
+	src/system/renderer_gl.cpp src/system/renderer_gl.hpp
 	src/task/manager.cpp src/task/manager.hpp
     src/main.cpp
 )

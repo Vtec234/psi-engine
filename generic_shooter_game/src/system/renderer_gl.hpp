@@ -20,38 +20,17 @@
 
 #pragma once
 
-#include <vector>
-#include <cstdint>
-
 #include <scene/system.hpp>
-#include <scene/scene.hpp>
 
 
 namespace gsg {
-class SystemManager {
+class SystemGLRenderer : public sol::ISystem {
 public:
-	void register_system(std::unique_ptr<sol::ISystem>);
+	uint64_t required_components() const override;
 
-	void load_scene(void*);
-
-	void update_scene();
-
-	void save_scene();
-
-	void shut_scene(void*);
-
-	
-private:
-	struct SystemStorage {
-		std::unique_ptr<sol::ISystem> sys;
-		uint64_t required_components;
-		size_t memory_requirements;
-	};
-
-	std::vector<SystemStorage> m_systems;
-
-	std::vector<sol::SceneComponentEntity> m_scene_entities;
-	std::vector<sol::SceneComponentTransform> m_scene_transforms;
-	std::vector<sol::SceneComponentModel> m_scene_models;
+	void on_scene_loaded(std::unique_ptr<sol::ISceneDirectAccess>) override;
+	void on_scene_update(std::unique_ptr<sol::ISceneDirectAccess>) override;
+	void on_scene_save(std::unique_ptr<sol::ISceneDirectAccess>, void* replace_with_save_file) override;
+	void on_scene_shutdown(std::unique_ptr<sol::ISceneDirectAccess>) override;
 };
 } // namespace gsg

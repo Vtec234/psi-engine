@@ -21,6 +21,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 
 #include "scene.hpp"
 
@@ -29,12 +30,12 @@ namespace sol {
 class ISystem {
 public:
 	/// Bitmask of SceneComponentType. Only the required types will be provided to the system.
-    virtual uint64_t required_components() const = 0;
+	virtual uint64_t required_components() const = 0;
 
 	/// Functions called at various moments of a scene's lifetime.
-    virtual void on_scene_loaded(ISceneDirectAccess) = 0;
-    virtual void on_scene_update(ISceneDirectAccess) = 0;
-    virtual void on_scene_save(ISceneDirectAccess, void* replace_with_save_file) = 0;
-    virtual void on_scene_shutdown(ISceneDirectAccess) = 0;
+	virtual void on_scene_loaded(std::unique_ptr<ISceneDirectAccess>) = 0;
+	virtual void on_scene_update(std::unique_ptr<ISceneDirectAccess>) = 0;
+	virtual void on_scene_save(std::unique_ptr<ISceneDirectAccess>, void* replace_with_save_file) = 0;
+	virtual void on_scene_shutdown(std::unique_ptr<ISceneDirectAccess>) = 0;
 };
 } // namespace sol

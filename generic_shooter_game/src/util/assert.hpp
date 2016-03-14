@@ -20,38 +20,19 @@
 
 #pragma once
 
-#include <vector>
-#include <cstdint>
-
-#include <scene/system.hpp>
-#include <scene/scene.hpp>
+#include <cstdlib>
+#include <cassert>
 
 
-namespace gsg {
-class SystemManager {
-public:
-	void register_system(std::unique_ptr<sol::ISystem>);
-
-	void load_scene(void*);
-
-	void update_scene();
-
-	void save_scene();
-
-	void shut_scene(void*);
-
-	
-private:
-	struct SystemStorage {
-		std::unique_ptr<sol::ISystem> sys;
-		uint64_t required_components;
-		size_t memory_requirements;
-	};
-
-	std::vector<SystemStorage> m_systems;
-
-	std::vector<sol::SceneComponentEntity> m_scene_entities;
-	std::vector<sol::SceneComponentTransform> m_scene_transforms;
-	std::vector<sol::SceneComponentModel> m_scene_models;
-};
-} // namespace gsg
+// TODO dump stacktrace and additional info to file before aborting
+#ifdef NDEBUG
+	#define ASSERT(cond) \
+		(cond) \
+		? ((void)0) \
+		: std::abort()
+#else
+	#define ASSERT(cond) \
+		(cond) \
+		? ((void)0) \
+		: assert(false)
+#endif
