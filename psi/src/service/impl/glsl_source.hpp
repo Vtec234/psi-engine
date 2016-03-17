@@ -30,7 +30,7 @@
 namespace psi_serv {
 /// A resource that a uniform in a shader may be attached to.
 /// The value of this resource will be sent to the shader at runtime.
-enum UniformMapping {
+enum class UniformMapping {
 	LOCAL_TO_CLIP,
 	LOCAL_TO_WORLD,
 	WORLD_TO_CLIP,
@@ -89,7 +89,7 @@ public:
 	static std::string uniform_type(UniformMapping map);
 
 	/// An enum representing where each type of eGLSL source should be in the array passed to construct_from_sources.
-	enum SourceTypeInArray {
+	enum class SourceTypeInArray : size_t {
 		VERTEX,
 		FRAGMENT,
 		GEOMETRY,

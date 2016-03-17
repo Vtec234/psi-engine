@@ -20,18 +20,11 @@
 
 #pragma once
 
-#include "../../scene/scene.hpp"
+#include <memory>
+
 #include "../system.hpp"
 
 
 namespace psi_sys {
-class SystemGLRenderer : public ISystem {
-public:
-	uint64_t required_components() const override;
-
-	void on_scene_loaded(std::unique_ptr<psi_scene::ISceneDirectAccess>) override;
-	void on_scene_update(std::unique_ptr<psi_scene::ISceneDirectAccess>) override;
-	void on_scene_save(std::unique_ptr<psi_scene::ISceneDirectAccess>, void* replace_with_save_file) override;
-	void on_scene_shutdown(std::unique_ptr<psi_scene::ISceneDirectAccess>) override;
-};
+std::unique_ptr<ISystem> start_gl_renderer();
 } // namespace psi_sys

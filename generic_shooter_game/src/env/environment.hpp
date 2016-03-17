@@ -31,6 +31,9 @@ struct Environment {
 };
 
 /// Parses command line arguments.
-/// @return Whether the parsing was successful. Main should quit otherwise.
-bool parse_command_line(int argc, char** argv, Environment& store);
+/// @param[in] argc argument count
+/// @param[in] argv array of argument strings
+/// @param[out] env object to store environment data in
+/// @return whether the parsing was successful
+bool parse_command_line(int argc, char** argv, Environment& env);
 } // namespace gsg

@@ -26,7 +26,7 @@
 // -- UniformMapping --
 psi_serv::UniformMapping psi_serv::uniform_mapping_from_name(std::string const& name) {
 	// TODO do dis wit templates?
-	#define UMAP(s) if(name == #s) return s;
+	#define UMAP(s) if(name == #s) return UniformMapping::s;
 	UMAP(LOCAL_TO_CLIP)
 	UMAP(LOCAL_TO_WORLD)
 	UMAP(WORLD_TO_CLIP)
@@ -48,7 +48,8 @@ psi_serv::UniformMapping psi_serv::uniform_mapping_from_name(std::string const& 
 
 // -- UniformBlockMapping --
 psi_serv::UniformBlockMapping psi_serv::uniform_block_mapping_from_name(std::string const& name) {
-	UMAP(LIGHT_DATA)
+	#define UBMAP(s) if (name == #s) return UniformBlockMapping::s;
+	UBMAP(LIGHT_DATA)
 
 	throw std::runtime_error("Tried to resolve invalid uniform block mapping " + name + ".");
 }
@@ -56,31 +57,31 @@ psi_serv::UniformBlockMapping psi_serv::uniform_block_mapping_from_name(std::str
 // -- GLSLSource --
 std::string psi_serv::GLSLSource::uniform_type(UniformMapping map) {
 	switch(map) {
-	case LOCAL_TO_CLIP:
-	case LOCAL_TO_WORLD:
-	case WORLD_TO_CLIP:
-	case WORLD_TO_CAMERA:
-	case CAMERA_TO_CLIP:
+	case UniformMapping::LOCAL_TO_CLIP:
+	case UniformMapping::LOCAL_TO_WORLD:
+	case UniformMapping::WORLD_TO_CLIP:
+	case UniformMapping::WORLD_TO_CAMERA:
+	case UniformMapping::CAMERA_TO_CLIP:
 		return "mat4";
 
-	case DIFFUSE_TEXTURE_SAMPLER:
-	case SPECULAR_TEXTURE_SAMPLER:
-	case NORMAL_TEXTURE_SAMPLER:
+	case UniformMapping::DIFFUSE_TEXTURE_SAMPLER:
+	case UniformMapping::SPECULAR_TEXTURE_SAMPLER:
+	case UniformMapping::NORMAL_TEXTURE_SAMPLER:
 		return "sampler2D";
 
-	case CUBEMAP_TEXTURE_SAMPLER:
+	case UniformMapping::CUBEMAP_TEXTURE_SAMPLER:
 		return "samplerCube";
 
-	case GAUSSIAN_SPECULAR_TERM:
+	case UniformMapping::GAUSSIAN_SPECULAR_TERM:
 		return "float";
 
-	case MESH_MIN_POS:
-	case MESH_MAX_POS:
-	case CAMERA_POSITION_WORLD:
+	case UniformMapping::MESH_MIN_POS:
+	case UniformMapping::MESH_MAX_POS:
+	case UniformMapping::CAMERA_POSITION_WORLD:
 		return "vec3";
 
-	case ACTIVE_POINT_LIGHTS:
-	case ACTIVE_SPOT_LIGHTS:
+	case UniformMapping::ACTIVE_POINT_LIGHTS:
+	case UniformMapping::ACTIVE_SPOT_LIGHTS:
 		return "uint";
 
 	default:
@@ -199,23 +200,23 @@ std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::construct_from_source
 			}
 
 			// sources are put into their respective string based upon their position in the array
-			switch (i_src) {
-			case VERTEX:
+			switch (static_cast<SourceTypeInArray>(i_src)) {
+			case SourceTypeInArray::VERTEX:
 				obj->m_vertex = src_concat;
 				break;
-			case FRAGMENT:
+			case SourceTypeInArray::FRAGMENT:
 				obj->m_fragment = src_concat;
 				break;
-			case GEOMETRY:
+			case SourceTypeInArray::GEOMETRY:
 				obj->m_geometry = src_concat;
 				break;
-			case TESSELATION_CONTROL:
+			case SourceTypeInArray::TESSELATION_CONTROL:
 				obj->m_tess_ctrl = src_concat;
 				break;
-			case TESSELATION_EVALUATION:
+			case SourceTypeInArray::TESSELATION_EVALUATION:
 				obj->m_tess_eval = src_concat;
 				break;
-			case COMPUTE:
+			case SourceTypeInArray::COMPUTE:
 				obj->m_compute = src_concat;
 				break;
 			}

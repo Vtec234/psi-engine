@@ -21,89 +21,95 @@
 #include "renderer_gl.hpp"
 
 #include "../../util/gl.hpp"
+#include "../../scene/components.hpp"
 
+class SystemGLRenderer : public psi_sys::ISystem {
+public:
+	uint64_t required_components() const override {
+		return
+			static_cast<uint64_t>(psi_scene::ComponentType::ENTITY) |
+			static_cast<uint64_t>(psi_scene::ComponentType::TRANSFORM) |
+			static_cast<uint64_t>(psi_scene::ComponentType::MODEL);
+	}
 
-uint64_t psi_sys::SystemGLRenderer::required_components() const {
-	return psi_scene::ENTITY | psi_scene::TRANSFORM | psi_scene::MODEL;
-}
+	void on_scene_loaded(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {
+		// enable face culling, counter-clockwise face is front
+		gl::Enable(gl::CULL_FACE);
+		gl::CullFace(gl::BACK);
+		gl::FrontFace(gl::CCW);
 
-void psi_sys::SystemGLRenderer::on_scene_loaded(std::unique_ptr<psi_scene::ISceneDirectAccess>) {
-	// enable face culling, counter-clockwise face is front
-	gl::Enable(gl::CULL_FACE);
-	gl::CullFace(gl::BACK);
-	gl::FrontFace(gl::CCW);
+		// ensure MSAA is enabled
+		gl::Enable(gl::MULTISAMPLE);
 
-	// ensure MSAA is enabled
-	gl::Enable(gl::MULTISAMPLE);
+		// convert linear shader output to sRGB in framebuffer
+		gl::Enable(gl::FRAMEBUFFER_SRGB);
 
-	// convert linear shader output to sRGB in framebuffer
-	gl::Enable(gl::FRAMEBUFFER_SRGB);
+		// enable depth test
+		gl::Enable(gl::DEPTH_TEST);
+		gl::DepthMask(GLboolean(true));
+		gl::DepthFunc(gl::LEQUAL);
+		gl::DepthRange(0.0f, 1.0f);
 
-	// enable depth test
-	gl::Enable(gl::DEPTH_TEST);
-	gl::DepthMask(GLboolean(true));
-	gl::DepthFunc(gl::LEQUAL);
-	gl::DepthRange(0.0f, 1.0f);
+		// enable depth clamping [0;1]
+		//gl::Enable(gl::DEPTH_CLAMP);
 
-	// enable depth clamping [0;1]
-	//gl::Enable(gl::DEPTH_CLAMP);
+		// setup color buffer clear value
+		gl::ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
-	// setup color buffer clear value
-	gl::ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		// setup depth buffer clear value
+		gl::ClearDepth(1.0f);
 
-	// setup depth buffer clear value
-	gl::ClearDepth(1.0f);
+		/* setup ambient light
+		GLScene3D* scene = static_cast<GLScene3D*>(m_scene.get());
+		scene->m_ambientLight.color = glm::vec3(0.0001f, 0.0001f, 0.0001f);
+		scene->m_directionalLight.color = glm::vec3(1.0f, 1.0f, 1.0f);
+		scene->m_directionalLight.dir_world = glm::vec3(0.0f, -1.0f, 0.0f);
+		GLConstants::SamplerSettings set = {
+			gl::LINEAR,
+			gl::LINEAR_MIPMAP_LINEAR,
+			gl::REPEAT,
+			gl::REPEAT,
+			16.0f
+		};
 
-	/* setup ambient light
-	GLScene3D* scene = static_cast<GLScene3D*>(m_scene.get());
-	scene->m_ambientLight.color = glm::vec3(0.0001f, 0.0001f, 0.0001f);
-	scene->m_directionalLight.color = glm::vec3(1.0f, 1.0f, 1.0f);
-	scene->m_directionalLight.dir_world = glm::vec3(0.0f, -1.0f, 0.0f);
-	GLConstants::SamplerSettings set = {
-		gl::LINEAR,
-		gl::LINEAR_MIPMAP_LINEAR,
-		gl::REPEAT,
-		gl::REPEAT,
-		16.0f
-	};
+		bindSamplerToTextureUnit(GLConstants::DIFFUSE, set);
+		bindSamplerToTextureUnit(GLConstants::SPECULAR, set);
+		bindSamplerToTextureUnit(GLConstants::NORMAL, set);
+		bindSamplerToTextureUnit(GLConstants::GUI, set);
+		bindSamplerToTextureUnit(GLConstants::TEXT, set);
+		bindSamplerToTextureUnit(GLConstants::CUBE, set);
 
-	bindSamplerToTextureUnit(GLConstants::DIFFUSE, set);
-	bindSamplerToTextureUnit(GLConstants::SPECULAR, set);
-	bindSamplerToTextureUnit(GLConstants::NORMAL, set);
-	bindSamplerToTextureUnit(GLConstants::GUI, set);
-	bindSamplerToTextureUnit(GLConstants::TEXT, set);
-	bindSamplerToTextureUnit(GLConstants::CUBE, set);
+		m_shaderPool.requestElement("shaders/bounding",
+			[&] ()->ShaderSource* {
+				return m_shaderSourceProvider->requestResource("shaders/bounding");
+			}
+		);
 
-	m_shaderPool.requestElement("shaders/bounding",
-		[&] ()->ShaderSource* {
-			return m_shaderSourceProvider->requestResource("shaders/bounding");
-		}
-	);
+		m_shaderPool.requestElement("shaders/skybox",
+			[&] ()->ShaderSource* {
+				return m_shaderSourceProvider->requestResource("shaders/skybox");
+			}
+		);
 
-	m_shaderPool.requestElement("shaders/skybox",
-		[&] ()->ShaderSource* {
-			return m_shaderSourceProvider->requestResource("shaders/skybox");
-		}
-	);
+		m_cubeTexPool.requestElement("textures/sky_debug",
+			[&] ()->gli::texture* {
+				return m_textureProvider->requestResource("textures/sky_debug");
+			}
+		);
+		*/
+	}
 
-	m_cubeTexPool.requestElement("textures/sky_debug",
-		[&] ()->gli::texture* {
-			return m_textureProvider->requestResource("textures/sky_debug");
-		}
-	);
-	*/
-}
+	void on_scene_update(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {
+		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-void psi_sys::SystemGLRenderer::on_scene_update(std::unique_ptr<psi_scene::ISceneDirectAccess>) {
-	gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+		// alot of stuff
+	}
 
-	// alot of stuff
-}
+	void on_scene_save(std::unique_ptr<psi_scene::ISceneDirectAccess>, void* replace_with_save_file) override {}
 
-void psi_sys::SystemGLRenderer::on_scene_save(std::unique_ptr<psi_scene::ISceneDirectAccess>, void* replace_with_save_file) {
+	void on_scene_shutdown(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {}
+};
 
-}
-
-void psi_sys::SystemGLRenderer::on_scene_shutdown(std::unique_ptr<psi_scene::ISceneDirectAccess>) {
-
+std::unique_ptr<psi_sys::ISystem> start_gl_renderer() {
+	return std::make_unique<SystemGLRenderer>();
 }

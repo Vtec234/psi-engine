@@ -32,7 +32,7 @@ namespace fs = boost::filesystem;
 
 
 static bool INITIALIZED = false;
-static psi_log::Level MAX_LEVEL = psi_log::LEVEL_EMERGENCY;
+static psi_log::Level MAX_LEVEL = psi_log::Level::EMERGENCY;
 static std::ofstream LOG_FILE_OUT;
 static std::mutex STREAMS;
 
@@ -55,7 +55,7 @@ void psi_log::init(fs::path const& work_dir, Level max) {
 	INITIALIZED = true;
 
 	if (!LOG_FILE_OUT.good()) {
-		warning("Logger") << "Unable to create log.log file.\n";
+		warning("Logger") << "Unable to create log.log file. Logging to stdout only.\n";
 	}
 
 	info("Logger") << "Initialized logger module.\n";
@@ -84,28 +84,28 @@ static inline std::string header(psi_log::Level lvl, std::string const& module, 
 	}
 
 	switch (lvl) {
-		case psi_log::LEVEL_EMERGENCY:
+		case psi_log::Level::EMERGENCY:
 			output += "EMERGENCY:\n";
 			break;
-		case psi_log::LEVEL_ALERT:
+		case psi_log::Level::ALERT:
 			output += "ALERT:\n";
 			break;
-		case psi_log::LEVEL_CRITICAL:
+		case psi_log::Level::CRITICAL:
 			output += "CRITICAL:\n";
 			break;
-		case psi_log::LEVEL_ERROR:
+		case psi_log::Level::ERROR:
 			output += "ERROR:\n";
 			break;
-		case psi_log::LEVEL_WARNING:
+		case psi_log::Level::WARNING:
 			output += "WARNING:\n";
 			break;
-		case psi_log::LEVEL_NOTICE:
+		case psi_log::Level::NOTICE:
 			output += "NOTICE:\n";
 			break;
-		case psi_log::LEVEL_INFO:
+		case psi_log::Level::INFO:
 			output += "INFO:\n";
 			break;
-		case psi_log::LEVEL_DEBUG:
+		case psi_log::Level::DEBUG:
 			output += "DEBUG:\n";
 			break;
 	}

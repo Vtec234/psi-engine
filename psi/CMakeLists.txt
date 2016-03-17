@@ -5,7 +5,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -g -Wall")
 
 set(SOURCE_FILES
 	src/log/log.cpp src/log/log.hpp
-	src/scene/scene.hpp
+	src/scene/access.hpp
+	src/scene/components.hpp
 	src/service/impl/glsl_source.cpp src/service/impl/glsl_source.hpp
 	src/service/impl/resource.cpp src/service/impl/resource.hpp
 	src/service/impl/window_gl.cpp src/service/impl/window_gl.hpp

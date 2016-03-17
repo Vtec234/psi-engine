@@ -23,14 +23,17 @@
 #include <vector>
 #include <cstdint>
 
+#include "../thread/task.hpp"
 #include "system.hpp"
-// TODO decouple with separate scene management from system management?
-#include "../scene/scene.hpp"
+
+#include "../scene/components.hpp"
 
 
 namespace psi_sys {
 class SystemManager {
 public:
+	explicit SystemManager(psi_thread::ITaskSubmitter*);
+
 	void register_system(std::unique_ptr<ISystem>);
 
 	void load_scene(void*);
@@ -41,18 +44,18 @@ public:
 
 	void shut_scene(void*);
 
-
 private:
 	struct SystemStorage {
 		std::unique_ptr<ISystem> sys;
 		uint64_t required_components;
-		size_t memory_requirements;
 	};
 
 	std::vector<SystemStorage> m_systems;
 
-	std::vector<psi_scene::SceneComponentEntity> m_scene_entities;
-	std::vector<psi_scene::SceneComponentTransform> m_scene_transforms;
-	std::vector<psi_scene::SceneComponentModel> m_scene_models;
+	std::vector<psi_scene::ComponentEntity> m_scene_entities;
+	std::vector<psi_scene::ComponentTransform> m_scene_transforms;
+	std::vector<psi_scene::ComponentModel> m_scene_models;
+
+	psi_thread::ITaskSubmitter* m_tasks;
 };
 } // namespace psi_sys

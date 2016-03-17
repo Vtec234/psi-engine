@@ -21,17 +21,24 @@
 #include "manager.hpp"
 
 
-uint64_t psi_thread::TaskManager::submit_task(std::function<void()> f) const {
-	// sshhh. nobody will ever know
-	// to outsiders we are concurrent af
-	f();
-	return 0;
-}
+class TaskManager : public psi_thread::ITaskSubmitter {
+public:
+	uint64_t submit_task(std::function<void()> f) const override {
+		// sshhh. nobody will ever know
+		// to outsiders we are concurrent af
+		f();
+		return 0;
+	}
 
-bool psi_thread::TaskManager::wait_for_task(uint64_t) const {
-	return false;
-}
+	bool wait_for_task(uint64_t) const override {
+		return false;
+	}
 
-bool psi_thread::TaskManager::is_task_running(uint64_t) const {
-	return false;
+	bool is_task_running(uint64_t) const override {
+		return false;
+	}
+};
+
+std::unique_ptr<psi_thread::ITaskSubmitter> psi_thread::start_default_task_manager() {
+	return std::make_unique<TaskManager>();
 }

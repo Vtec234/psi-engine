@@ -32,7 +32,7 @@ namespace psi_sys {
 class SystemManagerScene : public psi_scene::ISceneDirectAccess {
 private:
 	template <typename T>
-	struct ComponentTypeStorage {
+	struct ComponentStorage {
 		typedef T comp_type;
 
 		/// raw data of components already present
@@ -46,9 +46,9 @@ private:
 		std::vector<size_t> to_remove;
 	};
 
-	boost::optional<ComponentTypeStorage<psi_scene::SceneComponentEntity>> m_ents;
-	boost::optional<ComponentTypeStorage<psi_scene::SceneComponentTransform>> m_transfs;
-	boost::optional<ComponentTypeStorage<psi_scene::SceneComponentModel>> m_models;
+	boost::optional<ComponentStorage<psi_scene::ComponentEntity>> m_ents;
+	boost::optional<ComponentStorage<psi_scene::ComponentTransform>> m_transfs;
+	boost::optional<ComponentStorage<psi_scene::ComponentModel>> m_models;
 
 	template <typename T>
 	boost::any const read_comp_intrnl(T const& vec, size_t id) {
@@ -124,76 +124,101 @@ private:
 	}
 
 public:
-	boost::any const read_component(psi_scene::SceneComponentType t, size_t id) override {
+	boost::any const read_component(psi_scene::ComponentType t, size_t id) override {
 		switch(t) {
-			case psi_scene::ENTITY: return read_comp_intrnl(m_ents, id);
-			case psi_scene::TRANSFORM: return read_comp_intrnl(m_transfs, id);
-			case psi_scene::MODEL: return read_comp_intrnl(m_models, id);
+			case psi_scene::ComponentType::ENTITY: return read_comp_intrnl(m_ents, id);
+			case psi_scene::ComponentType::TRANSFORM: return read_comp_intrnl(m_transfs, id);
+			case psi_scene::ComponentType::MODEL: return read_comp_intrnl(m_models, id);
 		}
 	}
 
-	boost::any write_component(psi_scene::SceneComponentType t, size_t id) override {
+	boost::any write_component(psi_scene::ComponentType t, size_t id) override {
 		switch(t) {
-			case psi_scene::ENTITY: return write_comp_intrnl(m_ents, id);
-			case psi_scene::TRANSFORM: return write_comp_intrnl(m_transfs, id);
-			case psi_scene::MODEL: return write_comp_intrnl(m_models, id);
+			case psi_scene::ComponentType::ENTITY: return write_comp_intrnl(m_ents, id);
+			case psi_scene::ComponentType::TRANSFORM: return write_comp_intrnl(m_transfs, id);
+			case psi_scene::ComponentType::MODEL: return write_comp_intrnl(m_models, id);
 		}
 	}
 
-	size_t add_component(psi_scene::SceneComponentType t, boost::any comp) override {
+	size_t add_component(psi_scene::ComponentType t, boost::any comp) override {
 		switch(t) {
-			case psi_scene::ENTITY: return add_comp_intrnl(m_ents, std::move(comp));
-			case psi_scene::TRANSFORM: return add_comp_intrnl(m_transfs, std::move(comp));
-			case psi_scene::MODEL: return add_comp_intrnl(m_models, std::move(comp));
+			case psi_scene::ComponentType::ENTITY: return add_comp_intrnl(m_ents, std::move(comp));
+			case psi_scene::ComponentType::TRANSFORM: return add_comp_intrnl(m_transfs, std::move(comp));
+			case psi_scene::ComponentType::MODEL: return add_comp_intrnl(m_models, std::move(comp));
 		}
 	}
 
-	size_t component_count(psi_scene::SceneComponentType t) override {
+	size_t component_count(psi_scene::ComponentType t) override {
 		switch(t) {
-			case psi_scene::ENTITY: return count_intrnl(m_ents);
-			case psi_scene::TRANSFORM: return count_intrnl(m_transfs);
-			case psi_scene::MODEL: return count_intrnl(m_models);
+			case psi_scene::ComponentType::ENTITY: return count_intrnl(m_ents);
+			case psi_scene::ComponentType::TRANSFORM: return count_intrnl(m_transfs);
+			case psi_scene::ComponentType::MODEL: return count_intrnl(m_models);
 		}
 	}
 
-	void mark_component_remove(psi_scene::SceneComponentType t, size_t id) override {
+	void mark_component_remove(psi_scene::ComponentType t, size_t id) override {
 		switch(t) {
-			case psi_scene::ENTITY: return mark_rmv_intrnl(m_ents, id);
-			case psi_scene::TRANSFORM: return mark_rmv_intrnl(m_transfs, id);
-			case psi_scene::MODEL: return mark_rmv_intrnl(m_models, id);
+			case psi_scene::ComponentType::ENTITY: return mark_rmv_intrnl(m_ents, id);
+			case psi_scene::ComponentType::TRANSFORM: return mark_rmv_intrnl(m_transfs, id);
+			case psi_scene::ComponentType::MODEL: return mark_rmv_intrnl(m_models, id);
 		}
 	}
 
-	void cancel_component_removal(psi_scene::SceneComponentType t, size_t id) override {
+	void cancel_component_removal(psi_scene::ComponentType t, size_t id) override {
 		switch(t) {
-			case psi_scene::ENTITY: return cncl_rmv_intrnl(m_ents, id);
-			case psi_scene::TRANSFORM: return cncl_rmv_intrnl(m_transfs, id);
-			case psi_scene::MODEL: return cncl_rmv_intrnl(m_models, id);
+			case psi_scene::ComponentType::ENTITY: return cncl_rmv_intrnl(m_ents, id);
+			case psi_scene::ComponentType::TRANSFORM: return cncl_rmv_intrnl(m_transfs, id);
+			case psi_scene::ComponentType::MODEL: return cncl_rmv_intrnl(m_models, id);
 		}
 	}
 
-	bool component_is_marked_remove(psi_scene::SceneComponentType t, size_t id) override {
+	bool component_is_marked_remove(psi_scene::ComponentType t, size_t id) override {
 		switch(t) {
-			case psi_scene::ENTITY: return mrkd_rmv_intrnl(m_ents, id);
-			case psi_scene::TRANSFORM: return mrkd_rmv_intrnl(m_transfs, id);
-			case psi_scene::MODEL: return mrkd_rmv_intrnl(m_models, id);
+			case psi_scene::ComponentType::ENTITY: return mrkd_rmv_intrnl(m_ents, id);
+			case psi_scene::ComponentType::TRANSFORM: return mrkd_rmv_intrnl(m_transfs, id);
+			case psi_scene::ComponentType::MODEL: return mrkd_rmv_intrnl(m_models, id);
 		}
 	}
 };
 
+SystemManager::SystemManager(psi_thread::ITaskSubmitter* tasks)
+	: m_tasks(tasks) {}
+
 void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
-	m_systems.push_back({std::move(sys), sys->required_components(), 0});
+	m_systems.push_back({std::move(sys), sys->required_components()});
 }
 
 void SystemManager::load_scene(void*) {
+	// TODO load actual scene resource/file
+
+	// TODO init world
+	// test
+	auto tr = psi_scene::ComponentTransform{
+		.parent = psi_scene::NO_COMPONENT,
+		.pos = {{0.0f, 5.0f, 0.0f}},
+		.scale = {{1.0f, 1.0f, 1.0f}},
+		.orientation = {{1.0f, 0.0f, 0.0f, 0.0f}},
+	};
+	auto md = psi_scene::ComponentModel{
+		.mesh_name = {U"mesh/default"},
+		.mat_name = {U"mat/default"},
+		.shader_name = {U"shader/default"},
+	};
+	auto ent = psi_scene::ComponentEntity{
+		.transform = 0,
+		.model = 0,
+		.experiences_causality = true,
+	};
+
+	m_scene_transforms.push_back(tr);
+	m_scene_models.push_back(md);
+	m_scene_entities.push_back(ent);
+
+	// init accessors like
+	std::vector<SystemManagerScene> scene_accessors(m_systems.size());
 	// dispatch system starters
 	// init world
 	// dispatch system scene initializers
-
-	// TEST
-	m_scene_transforms.push_back({psi_scene::NO_COMPONENT, {{0.0f, 5.0f, 0.0f}}, {{1.0f, 1.0f, 1.0f}}, {{1.0f, 0.0f, 0.0f, 0.0f}}});
-	m_scene_models.push_back({{U"mesh/default"}, {U"mat/default"}, {U"shader/default"}});
-	m_scene_entities.push_back({0,0,false});
 }
 
 void SystemManager::update_scene() {

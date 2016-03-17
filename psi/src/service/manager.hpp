@@ -31,7 +31,7 @@ namespace psi_serv {
 /// The point of this manager is that a I..Service const& can safely be passed to any thread.
 /// A requirement for I..Service implementations is that each const function be safe
 /// with respect to other const functions, as well as non-const ones.
-/// Only non-const functions can be called solely by a single thread.
+/// Non-const functions can only be called by a single thread.
 class ServiceManager {
 public:
 	ServiceManager();

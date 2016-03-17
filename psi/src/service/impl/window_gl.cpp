@@ -21,12 +21,77 @@
 #include "window_gl.hpp"
 
 #include <iostream>
+#include <atomic>
 
 #include "../../util/gl.hpp"
 #include <GLFW/glfw3.h>
 
 #include "../../log/log.hpp"
 
+
+/// A class managing a GLFW window with an OpenGL rendering context.
+class GLWindowService : public psi_serv::IWindowService {
+public:
+	explicit GLWindowService(GLFWwindow* win)
+	: m_window(win)
+	, m_should_close(false) {}
+
+	virtual ~GLWindowService() {
+		glfwDestroyWindow(m_window);
+		glfwTerminate();
+	}
+
+	void update_window() override {
+		glfwSwapBuffers(m_window);
+		glfwPollEvents();
+
+		m_should_close = glfwWindowShouldClose(m_window) || glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+	}
+
+	void set_mouse_block(bool block) override {
+		if (block)
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		else
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	}
+
+	bool should_close() const override {
+		return m_should_close;
+	}
+
+	uint32_t width() const override {
+		return m_framebuffer_width;
+	}
+
+	uint32_t height() const override {
+		return m_framebuffer_height;
+	}
+
+	double aspect_ratio() const override {
+		return m_aspect_ratio;
+	}
+
+	void framebuffer_size_callback(int width, int height) {
+		m_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
+		m_framebuffer_width = width;
+		m_framebuffer_height = height;
+	}
+
+	// TODO store all the input data atomically
+	void key_pressed_callback(int key, int scancode, int action, int mods) {}
+
+	void mouse_pressed_callback(int button, int action, int mods) {}
+
+	void cursor_moved_callback(double x, double y) {}
+
+private:
+	GLFWwindow* m_window;
+
+	std::atomic<bool> m_should_close;
+	std::atomic<double> m_aspect_ratio;
+	std::atomic<int> m_framebuffer_width;
+	std::atomic<int> m_framebuffer_height;
+};
 
 static GLvoid APIENTRY gl_error_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const GLvoid*) {
 	bool is_error;
@@ -80,7 +145,7 @@ static GLvoid APIENTRY gl_error_callback(GLenum source, GLenum type, GLuint id, 
 		psi_log::debug("OpenGL") << msg << "\n";
 }
 
-std::unique_ptr<psi_serv::IWindowService> psi_serv::GLWindowService::start_gl_window_service(GLWindowServiceArgs args) {
+std::unique_ptr<psi_serv::IWindowService> psi_serv::start_gl_window_service(GLWindowServiceArgs args) {
 	// -- START GLFW --
 	if (glfwInit() == 0)
 		throw std::runtime_error("Failed to initialize GLFW.");
@@ -165,55 +230,3 @@ std::unique_ptr<psi_serv::IWindowService> psi_serv::GLWindowService::start_gl_wi
 	// -- RETURN SERVICE --
 	return std::unique_ptr<IWindowService>(service);
 }
-
-psi_serv::GLWindowService::GLWindowService(GLFWwindow* win)
-	: m_window(win)
-	, m_should_close(false) {}
-
-psi_serv::GLWindowService::~GLWindowService() {
-	glfwDestroyWindow(m_window);
-	glfwTerminate();
-}
-
-void psi_serv::GLWindowService::update_window() {
-	glfwSwapBuffers(m_window);
-	glfwPollEvents();
-
-	m_should_close = glfwWindowShouldClose(m_window) || glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
-}
-
-void psi_serv::GLWindowService::set_mouse_block(bool block) {
-	if (block)
-		glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	else
-		glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-}
-
-bool psi_serv::GLWindowService::should_close() const {
-	return m_should_close;
-}
-
-uint32_t psi_serv::GLWindowService::width() const {
-	return m_framebuffer_width;
-}
-
-uint32_t psi_serv::GLWindowService::height() const {
-	return m_framebuffer_height;
-}
-
-double psi_serv::GLWindowService::aspect_ratio() const {
-	return m_aspect_ratio;
-}
-
-void psi_serv::GLWindowService::framebuffer_size_callback(int width, int height) {
-	m_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
-	m_framebuffer_width = width;
-	m_framebuffer_height = height;
-}
-
-// TODO store all the input data atomically
-void psi_serv::GLWindowService::key_pressed_callback(int key, int scancode, int action, int mods) {}
-
-void psi_serv::GLWindowService::mouse_pressed_callback(int button, int action, int mods) {}
-
-void psi_serv::GLWindowService::cursor_moved_callback(double x, double y) {}

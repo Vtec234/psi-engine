@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "../scene/scene.hpp"
+#include "../scene/access.hpp"
 
 
 namespace psi_sys {

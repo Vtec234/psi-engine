@@ -31,7 +31,7 @@ bool gsg::parse_command_line(int argc, char** argv, Environment& store) {
 	options.add_options()
 		("help,h", "Display this help message.")
 		("version,v", "Display the program version.")
-		("directory,D", po::value<fs::path>()->default_value("./"), "Specify a working directory for the program.")
+		("directory,D", po::value<fs::path>()->default_value("./"), "Specifies a working directory for the program.")
 	;
 
 	po::variables_map vm;

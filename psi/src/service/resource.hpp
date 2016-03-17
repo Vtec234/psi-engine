@@ -18,7 +18,6 @@
  *
  */
 
-
 #pragma once
 
 #include <string>
@@ -31,7 +30,7 @@
 
 namespace psi_serv {
 /// State that a resource in ResourceService can be in.
-enum ResourceState {
+enum class ResourceState {
     /// Resource is not loading or in storage.
     Unavailable,
     /// Resource is currently loading from the hard disk/other medium.

@@ -38,13 +38,13 @@ int main(int argc, char** argv) {
 	if (!gsg::parse_command_line(argc, argv, env))
 		return 0;
 
-	psi_log::init(env.working_dir, psi_log::LEVEL_DEBUG);
+	psi_log::init(env.working_dir, psi_log::Level::DEBUG);
 
-	psi_thread::TaskManager task_manager;
+	auto task_manager = psi_thread::start_default_task_manager();
 
 	psi_serv::ServiceManager services;
-	services.set_resource_service(psi_serv::ResourceLoader::start_resource_loader(psi_serv::ResourceLoaderArgs{
-		&task_manager,
+	services.set_resource_service(psi_serv::start_resource_loader(psi_serv::ResourceLoaderArgs{
+		task_manager.get(),
 	}));
 
 	try {
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	services.set_window_service(psi_serv::GLWindowService::start_gl_window_service(psi_serv::GLWindowServiceArgs{
+	services.set_window_service(psi_serv::start_gl_window_service(psi_serv::GLWindowServiceArgs{
 		640,
 		480,
 		8,
@@ -84,4 +84,3 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-///let mut systems = manager::SystemManager::new();

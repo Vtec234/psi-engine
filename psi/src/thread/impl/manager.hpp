@@ -20,19 +20,11 @@
 
 #pragma once
 
+#include <memory>
+
 #include "../task.hpp"
 
 
 namespace psi_thread {
-class TaskManager : public ITaskSubmitter {
-public:
-	uint64_t submit_task(std::function<void()>) const override;
-
-	bool wait_for_task(uint64_t) const override;
-
-	bool is_task_running(uint64_t) const override;
-
-private:
-
-};
+std::unique_ptr<ITaskSubmitter> start_default_task_manager();
 } // namespace psi_thread

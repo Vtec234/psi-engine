@@ -9,5 +9,6 @@ set(SOURCE_FILES
 )
 
 include_directories(../psi/src)
+
 add_executable(gsg ${SOURCE_FILES})
 target_link_libraries(gsg boost_program_options psi)

@@ -20,17 +20,14 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
-#include <atomic>
 
 #include "../window.hpp"
 
 
-typedef struct GLFWwindow GLFWwindow;
-
-
 namespace psi_serv {
-/// The arguments required to start a GLWindowService instance.
+/// The arguments required to start an OpenGL window instance.
 struct GLWindowServiceArgs {
 	uint16_t width;
 	uint16_t height;
@@ -45,37 +42,8 @@ struct GLWindowServiceArgs {
 	bool debug;
 };
 
-/// A class managing a GLFW window with an OpenGL rendering context.
-class GLWindowService : public IWindowService {
-public:
-	~GLWindowService();
-
-	/// Starts the service and spawns a window.
-	/// Might throw an exception or two.
-	/// Shouldn't probably be called more than once - might bork.
-	static std::unique_ptr<IWindowService> start_gl_window_service(GLWindowServiceArgs);
-
-	void update_window() override;
-	void set_mouse_block(bool) override;
-
-	bool should_close() const override;
-	uint32_t width() const override;
-	uint32_t height() const override;
-	double aspect_ratio() const override;
-
-private:
-	explicit GLWindowService(GLFWwindow*);
-
-	void framebuffer_size_callback(int width, int height);
-	void key_pressed_callback(int key, int scancode, int action, int mods);
-	void mouse_pressed_callback(int button, int action, int mods);
-	void cursor_moved_callback(double x, double y);
-
-	GLFWwindow* m_window;
-
-	std::atomic<bool> m_should_close;
-	std::atomic<double> m_aspect_ratio;
-	std::atomic<int> m_framebuffer_width;
-	std::atomic<int> m_framebuffer_height;
-};
+/// Starts the service and spawns a window.
+/// Might throw an exception or two.
+/// Shouldn't probably be called more than once - might bork.
+std::unique_ptr<IWindowService> start_gl_window_service(GLWindowServiceArgs);
 } // namespace psi_serv

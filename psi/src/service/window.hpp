@@ -45,7 +45,7 @@ public:
 /// A key present on a keyboard.
 /// Names taken from GLFW.
 // TODO is this legal?
-enum KeyboardKey {
+enum class KeyboardKey {
     KEY_SPACE,
     KEY_APOSTROPHE,
     KEY_COMMA,
@@ -183,13 +183,13 @@ enum KeyboardKey {
 };
 
 /// What happened to a given input method.
-enum InputAction {
+enum class InputAction {
 	ACTION_PRESSED,
 	ACTION_RELEASED
 };
 
 /// One of the buttons present in a mouse.
-enum MouseButton {
+enum class MouseButton {
 	BUTTON_1,
 	BUTTON_2,
 	BUTTON_3

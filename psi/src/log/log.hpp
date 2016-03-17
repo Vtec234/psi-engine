@@ -26,42 +26,52 @@
 
 
 namespace psi_log {
-	enum Level {
-		LEVEL_EMERGENCY,
-		LEVEL_ALERT,
-		LEVEL_CRITICAL,
-		LEVEL_ERROR,
-		LEVEL_WARNING,
-		LEVEL_NOTICE,
-		LEVEL_INFO,
-		LEVEL_DEBUG,
+	/// The importance level of a log message.
+	enum class Level {
+		EMERGENCY,
+		ALERT,
+		CRITICAL,
+		ERROR,
+		WARNING,
+		NOTICE,
+		INFO,
+		DEBUG,
 	};
 
+	/// Initializes the logger.
+	/// @param[in] work_dir working directory to put log files in
+	/// @param[in] max the maximum logged level
 	void init(boost::filesystem::path const& work_dir, Level max);
-	psi_util::Streamer log(Level, std::string const& module, std::string const& part);
+
+	/// Begins logging a string with the given level.
+	/// @param[in] lvl the importance level
+	/// @param[in] module the program module
+	/// @param[in] part the program part
+	/// @returns a cout-like streamer object to log into
+	psi_util::Streamer log(Level lvl, std::string const& module, std::string const& part);
 
 	inline psi_util::Streamer emergency(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_EMERGENCY, module, part);
+		return log(Level::EMERGENCY, module, part);
 	}
 	inline psi_util::Streamer alert(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_ALERT, module, part);
+		return log(Level::ALERT, module, part);
 	}
 	inline psi_util::Streamer critical(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_CRITICAL, module, part);
+		return log(Level::CRITICAL, module, part);
 	}
 	inline psi_util::Streamer error(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_ERROR, module, part);
+		return log(Level::ERROR, module, part);
 	}
 	inline psi_util::Streamer warning(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_WARNING, module, part);
+		return log(Level::WARNING, module, part);
 	}
 	inline psi_util::Streamer notice(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_NOTICE, module, part);
+		return log(Level::NOTICE, module, part);
 	}
 	inline psi_util::Streamer info(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_INFO, module, part);
+		return log(Level::INFO, module, part);
 	}
 	inline psi_util::Streamer debug(std::string const& module = "", std::string const& part = "") {
-		return log(LEVEL_DEBUG, module, part);
+		return log(Level::DEBUG, module, part);
 	}
 } // namespace psi_log
