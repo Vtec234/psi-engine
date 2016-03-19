@@ -21,18 +21,18 @@
 #include "renderer_gl.hpp"
 
 #include "../../util/gl.hpp"
+#include "../../scene/access.hpp"
 #include "../../scene/components.hpp"
+#include "../../scene/impl/default_components.hpp"
 
 class SystemGLRenderer : public psi_sys::ISystem {
 public:
 	uint64_t required_components() const override {
-		return
-			static_cast<uint64_t>(psi_scene::ComponentType::ENTITY) |
-			static_cast<uint64_t>(psi_scene::ComponentType::TRANSFORM) |
-			static_cast<uint64_t>(psi_scene::ComponentType::MODEL);
+		// yay hardcoded values
+		return psi_scene::component_type_entity_info.id | psi_scene::component_type_model_info.id | psi_scene::component_type_transform_info.id;
 	}
 
-	void on_scene_loaded(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {
+	void on_scene_loaded(psi_scene::ISceneDirectAccess&) override {
 		// enable face culling, counter-clockwise face is front
 		gl::Enable(gl::CULL_FACE);
 		gl::CullFace(gl::BACK);
@@ -54,7 +54,7 @@ public:
 		//gl::Enable(gl::DEPTH_CLAMP);
 
 		// setup color buffer clear value
-		gl::ClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		gl::ClearColor(1.0f, 0.5f, 0.5f, 1.0f);
 
 		// setup depth buffer clear value
 		gl::ClearDepth(1.0f);
@@ -99,17 +99,17 @@ public:
 		*/
 	}
 
-	void on_scene_update(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {
+	void on_scene_update(psi_scene::ISceneDirectAccess&) override {
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
 		// alot of stuff
 	}
 
-	void on_scene_save(std::unique_ptr<psi_scene::ISceneDirectAccess>, void* replace_with_save_file) override {}
+	void on_scene_save(psi_scene::ISceneDirectAccess&, void* replace_with_save_file) override {}
 
-	void on_scene_shutdown(std::unique_ptr<psi_scene::ISceneDirectAccess>) override {}
+	void on_scene_shutdown(psi_scene::ISceneDirectAccess&) override {}
 };
 
-std::unique_ptr<psi_sys::ISystem> start_gl_renderer() {
+std::unique_ptr<psi_sys::ISystem> psi_sys::start_gl_renderer() {
 	return std::make_unique<SystemGLRenderer>();
 }

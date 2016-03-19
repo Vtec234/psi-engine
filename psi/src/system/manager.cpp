@@ -30,154 +30,110 @@
 
 namespace psi_sys {
 class SystemManagerScene : public psi_scene::ISceneDirectAccess {
+friend class SystemManager;
 private:
-	template <typename T>
 	struct ComponentStorage {
-		typedef T comp_type;
-
 		/// raw data of components already present
-		std::vector<T> data;
+		std::vector<char> data;
+		/// amount of stored components
+		size_t stored_n = 0;
 		/// indices of changed components
 		/// added component ids do not have to be here to be synced
 		std::vector<size_t> changed;
 		/// raw data of added components
-		std::vector<T> added;
+		std::vector<char> added;
+		/// amount of added components
+		size_t added_n = 0;
 		/// indices of components marked for removal
 		std::vector<size_t> to_remove;
 	};
 
-	boost::optional<ComponentStorage<psi_scene::ComponentEntity>> m_ents;
-	boost::optional<ComponentStorage<psi_scene::ComponentTransform>> m_transfs;
-	boost::optional<ComponentStorage<psi_scene::ComponentModel>> m_models;
-
-	template <typename T>
-	boost::any const read_comp_intrnl(T const& vec, size_t id) {
-		ASSERT(vec && id < (vec->data.size() + vec->added.size()));
-
-		if (id < vec->data.size()) {
-			return &vec->data[id];
-		}
-		else
-			return &vec->added[id - vec->data.size()];
-	}
-
-	template <typename T>
-	boost::any write_comp_intrnl(T& vec, size_t id) {
-		ASSERT(vec && id < (vec->data.size() + vec->added.size()));
-
-		if (id < vec->data.size()) {
-			// mark as changed
-			if (std::find(vec->changed.begin(), vec->changed.end(), id) == vec->changed.end())
-				vec->changed.push_back(id);
-
-			return &vec->data[id];
-		}
-		else {
-			// no need to mark as changed, since added components sync anyway
-			return &vec->added[id - vec->data.size()];
-		}
-	}
-
-	template <typename T, typename V = typename T::value_type::comp_type>
-	size_t add_comp_intrnl(T& vec, boost::any comp) {
-		ASSERT(vec);
-
-		try {
-			vec->added.push_back(boost::any_cast<V>(std::move(comp)));
-		}
-		catch(std::exception const& e) {
-			ASSERT(false && "Invalid cast of component type");
-		}
-
-		return vec->data.size() + vec->added.size();
-	}
-
-	template <typename T>
-	size_t count_intrnl(T const& vec) {
-		ASSERT(vec);
-
-		return vec->data.size() + vec->added.size();
-	}
-
-	template <typename T>
-	void mark_rmv_intrnl(T& vec, size_t id) {
-		ASSERT(vec && id < (vec->data.size() + vec->added.size()));
-
-		if (std::find(vec->to_remove.begin(), vec->to_remove.end(), id) == vec->to_remove.end())
-			vec->to_remove.push_back(id);
-	}
-
-	template <typename T>
-	void cncl_rmv_intrnl(T& vec, size_t id) {
-		ASSERT(vec && id < (vec->data.size() + vec->added.size()));
-
-		auto it = std::find(vec->to_remove.begin(), vec->to_remove.end(), id);
-		if (it != vec->to_remove.end())
-			vec->to_remove.erase(it);
-	}
-
-	template <typename T>
-	bool mrkd_rmv_intrnl(T const& vec, size_t id) {
-		ASSERT(vec && id < (vec->data.size() + vec->added.size()));
-
-		return std::find(vec->to_remove.begin(), vec->to_remove.end(), id) != vec->to_remove.end();
-	}
+	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
+	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
 
 public:
 	boost::any const read_component(psi_scene::ComponentType t, size_t id) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return read_comp_intrnl(m_ents, id);
-			case psi_scene::ComponentType::TRANSFORM: return read_comp_intrnl(m_transfs, id);
-			case psi_scene::ComponentType::MODEL: return read_comp_intrnl(m_models, id);
+		ASSERT(m_scene.count(t));
+		auto const& store = m_scene[t];
+		auto const& info = m_types[t];
+		ASSERT(id < (store.stored_n + store.added_n));
+
+		if (id < store.stored_n) {
+			return info.to_const_any_f(&store.data[id * info.size]);
+		}
+		else {
+			return info.to_const_any_f(&store.added[(id - store.stored_n) * info.size]);
 		}
 	}
 
 	boost::any write_component(psi_scene::ComponentType t, size_t id) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return write_comp_intrnl(m_ents, id);
-			case psi_scene::ComponentType::TRANSFORM: return write_comp_intrnl(m_transfs, id);
-			case psi_scene::ComponentType::MODEL: return write_comp_intrnl(m_models, id);
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+		auto const& info = m_types[t];
+		ASSERT(id < (store.stored_n + store.added_n));
+
+		if (id < store.stored_n) {
+			// mark as changed
+			if (std::find(store.changed.begin(), store.changed.end(), id) == store.changed.end())
+				store.changed.push_back(id);
+
+			return info.to_any_f(&store.data[id * info.size]);
+		}
+		else {
+			// no need to mark as changed, since added components sync anyway
+			return info.to_any_f(&store.added[(id - store.stored_n) * info.size]);
 		}
 	}
 
 	size_t add_component(psi_scene::ComponentType t, boost::any comp) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return add_comp_intrnl(m_ents, std::move(comp));
-			case psi_scene::ComponentType::TRANSFORM: return add_comp_intrnl(m_transfs, std::move(comp));
-			case psi_scene::ComponentType::MODEL: return add_comp_intrnl(m_models, std::move(comp));
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+
+		try {
+			auto p = m_types[t].to_data_f(&comp);
+			// TODO is this right?
+			store.added.insert(store.added.end(), p, p + m_types[t].size);
+			++store.added_n;
 		}
+		catch (std::exception const& e) {
+			ASSERT(false && "invalid component type");
+		}
+
+		return store.stored_n + store.added_n - 1;
 	}
 
 	size_t component_count(psi_scene::ComponentType t) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return count_intrnl(m_ents);
-			case psi_scene::ComponentType::TRANSFORM: return count_intrnl(m_transfs);
-			case psi_scene::ComponentType::MODEL: return count_intrnl(m_models);
-		}
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+
+		return store.stored_n + store.added_n;
 	}
 
 	void mark_component_remove(psi_scene::ComponentType t, size_t id) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return mark_rmv_intrnl(m_ents, id);
-			case psi_scene::ComponentType::TRANSFORM: return mark_rmv_intrnl(m_transfs, id);
-			case psi_scene::ComponentType::MODEL: return mark_rmv_intrnl(m_models, id);
-		}
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+		ASSERT(id < (store.stored_n + store.added_n));
+
+		if(std::find(store.to_remove.begin(), store.to_remove.end(), id) == store.to_remove.end())
+			store.to_remove.push_back(id);
 	}
 
 	void cancel_component_removal(psi_scene::ComponentType t, size_t id) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return cncl_rmv_intrnl(m_ents, id);
-			case psi_scene::ComponentType::TRANSFORM: return cncl_rmv_intrnl(m_transfs, id);
-			case psi_scene::ComponentType::MODEL: return cncl_rmv_intrnl(m_models, id);
-		}
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+		ASSERT(id < (store.stored_n + store.added_n));
+
+		auto it = std::find(store.to_remove.begin(), store.to_remove.end(), id);
+		if (it != store.to_remove.end())
+			store.to_remove.erase(it);
 	}
 
 	bool component_is_marked_remove(psi_scene::ComponentType t, size_t id) override {
-		switch(t) {
-			case psi_scene::ComponentType::ENTITY: return mrkd_rmv_intrnl(m_ents, id);
-			case psi_scene::ComponentType::TRANSFORM: return mrkd_rmv_intrnl(m_transfs, id);
-			case psi_scene::ComponentType::MODEL: return mrkd_rmv_intrnl(m_models, id);
-		}
+		ASSERT(m_scene.count(t));
+		auto& store = m_scene[t];
+		ASSERT(id < (store.stored_n + store.added_n));
+
+		return std::find(store.to_remove.begin(), store.to_remove.end(), id) != store.to_remove.end();
 	}
 };
 
@@ -185,59 +141,104 @@ SystemManager::SystemManager(psi_thread::ITaskSubmitter* tasks)
 	: m_tasks(tasks) {}
 
 void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
-	m_systems.push_back({std::move(sys), sys->required_components()});
+	auto req = sys->required_components();
+	m_systems.push_back({std::move(sys), req});
+}
+
+void SystemManager::register_component_type(psi_scene::ComponentTypeInfo info) {
+	ASSERT(!bool(m_scene.count(info.id)) && !bool(m_types.count(info.id)));
+
+	m_types[info.id] = info;
+	m_scene[info.id];
 }
 
 void SystemManager::load_scene(void*) {
-	// TODO load actual scene resource/file
+	// TODO load actual scene resource/file and init storage
 
-	// TODO init world
-	// test
-	auto tr = psi_scene::ComponentTransform{
-		.parent = psi_scene::NO_COMPONENT,
-		.pos = {{0.0f, 5.0f, 0.0f}},
-		.scale = {{1.0f, 1.0f, 1.0f}},
-		.orientation = {{1.0f, 0.0f, 0.0f, 0.0f}},
-	};
-	auto md = psi_scene::ComponentModel{
-		.mesh_name = {U"mesh/default"},
-		.mat_name = {U"mat/default"},
-		.shader_name = {U"shader/default"},
-	};
-	auto ent = psi_scene::ComponentEntity{
-		.transform = 0,
-		.model = 0,
-		.experiences_causality = true,
-	};
+	std::vector<uint64_t> tasks;
+	for (auto& sys : m_systems) {
+		SystemManagerScene sc;
+		auto id = m_tasks->submit_task([&, this]{
+			for (auto& info : m_types) {
+				// component type is required by the system
+				if (sys.required_components & info.first) {
+					// copy type info
+					sc.m_types[info.first] = info.second;
+					// copy type data - long operation!
+					auto& comp = sc.m_scene[info.first];
+					comp.data = m_scene[info.first].data;
+					comp.stored_n = m_scene[info.first].stored_n;
+				}
+			}
 
-	m_scene_transforms.push_back(tr);
-	m_scene_models.push_back(md);
-	m_scene_entities.push_back(ent);
+			sys.sys->on_scene_loaded(sc);
+		});
+		tasks.push_back(id);
+	}
+	// wait until all systems are done
+	for (auto task : tasks) {
+		m_tasks->wait_for_task(task);
+	}
 
-	// init accessors like
-	std::vector<SystemManagerScene> scene_accessors(m_systems.size());
-	// dispatch system starters
-	// init world
-	// dispatch system scene initializers
+	// TODO SYNC CHANGES
 }
 
 void SystemManager::update_scene() {
-	// dispatch system scene updates
-	// sync updates
-	// repeat
+	std::vector<uint64_t> tasks;
+	for (auto& sys : m_systems) {
+		SystemManagerScene sc;
+		auto id = m_tasks->submit_task([&, this]{
+			for (auto& info : m_types) {
+				// component type is required by the system
+				if (sys.required_components & info.first) {
+					// copy type info
+					sc.m_types[info.first] = info.second;
+					// copy type data - long operation!
+					auto& comp = sc.m_scene[info.first];
+					comp.data = m_scene[info.first].data;
+					comp.stored_n = m_scene[info.first].stored_n;
+				}
+			}
 
+			sys.sys->on_scene_update(sc);
+		});
+		tasks.push_back(id);
+	}
+	// wait until all systems are done
+	for (auto task : tasks) {
+		m_tasks->wait_for_task(task);
+	}
 
-	// submit ISceneDirectAccess implementation to each system
-	// copy data, manage data, etc, etc
-
+	// TODO SYNC CHANGES
 }
 
 void SystemManager::save_scene() {
-	// dispatch system scene savers
-	// close
-	// repeat
+	std::vector<uint64_t> tasks;
+	for (auto& sys : m_systems) {
+		SystemManagerScene sc;
+		auto id = m_tasks->submit_task([&, this]{
+			for (auto& info : m_types) {
+				// component type is required by the system
+				if (sys.required_components & info.first) {
+					// copy type info
+					sc.m_types[info.first] = info.second;
+					// copy type data - long operation!
+					auto& comp = sc.m_scene[info.first];
+					comp.data = m_scene[info.first].data;
+					comp.stored_n = m_scene[info.first].stored_n;
+				}
+			}
 
+			sys.sys->on_scene_loaded(sc);
+		});
+		tasks.push_back(id);
+	}
+	// wait until all systems are done
+	for (auto task : tasks) {
+		m_tasks->wait_for_task(task);
+	}
 
+	// TODO SYNC CHANGES
 }
 
 void SystemManager::shut_scene(void*) {

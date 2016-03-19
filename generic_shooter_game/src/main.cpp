@@ -29,6 +29,8 @@
 #include <service/impl/glsl_source.hpp>
 #include <service/impl/window_gl.hpp>
 #include <system/manager.hpp>
+#include <scene/impl/default_components.hpp>
+#include <system/impl/renderer_gl.hpp>
 
 #include "env/environment.hpp"
 
@@ -49,7 +51,7 @@ int main(int argc, char** argv) {
 
 	try {
 		auto status = services.resource_service().request_resource(
-			std::hash<std::string>()("/glsl/box.vert"),
+		std::hash<std::string>()("/glsl/box.vert"),
 			[&]() {
 				std::array<std::vector<std::string>, 6> srcs;
 
@@ -75,10 +77,17 @@ int main(int argc, char** argv) {
 		true,
 	}));
 
-	auto& window = services.window_service();
+	psi_sys::SystemManager systems(task_manager.get());
+	systems.register_component_type(psi_scene::component_type_entity_info);
+	systems.register_component_type(psi_scene::component_type_model_info);
+	systems.register_component_type(psi_scene::component_type_transform_info);
+	systems.register_system(psi_sys::start_gl_renderer());
+	systems.load_scene(nullptr);
 
 	// TODO cap FPS
+	auto& window = services.window_service();
 	while(!window.should_close()) {
+		systems.update_scene();
 		window.update_window();
 	}
 

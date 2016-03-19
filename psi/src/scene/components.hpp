@@ -22,59 +22,55 @@
 
 #include <cstdint>
 #include <array>
-#include <initializer_list>
+#include <functional>
 
-#include <unicode/umachine.h>
+#include <boost/any.hpp>
 
 
 namespace psi_scene {
-/// The type of scene component.
-enum class ComponentType : uint64_t {
-	ENTITY = 0b1,
-	TRANSFORM = 0b10,
-	MODEL = 0b100,
-};
+using ComponentType = uint64_t;
+/// TypeA | TypeB | TypeC
+using ComponentTypeBitset = uint64_t;
+using ComponentId = int64_t;
 
 /// A value indicating that no component is referenced.
-constexpr int64_t NO_COMPONENT = -1;
+constexpr ComponentId NO_COMPONENT = -1;
 
-/// Base struct which all components inherit from.
-/// Used to indicate the component type.
-template <enum ComponentType T>
-struct Component { ComponentType type = T; };
+/// A component type info piece specifying that a component of this type represents some other component.
+struct ComponentRef {
+	/// The type of the referenced component.
+	ComponentType type;
+	/// The byte offset into the referencing component where the reference is contained.
+	size_t offset;
+	/// Whether a valid reference is necessary for the referencing component to exist.
+	bool necessary;
+};
+// if necessary and referenced comp deleted, delete me
+// if not necessary and referenced comp deleted, zero the ref
 
-/// The basic scene component, representing a single entity.
-/// Its fields are indices of other components which this entity comprises of,
-/// where a value of NO_COMPONENT indicates that the entity contains no such
-/// component. This component is special in the sense that removing it will
-/// also remove all components which it references, unless these components
-/// are also referenced by other entities.
-struct ComponentEntity /*: Component<ComponentType::ENTITY>*/ {
-	int64_t transform = NO_COMPONENT;
-	int64_t model = NO_COMPONENT;
-
-	bool experiences_causality = false;
+/// A component type info piece specifying that a component of this type owns another component.
+struct ComponentOwnership {
+	/// The type of the owned component.
+	ComponentType type;
+	/// The byte offset into the owner where the owned component id is contained.
+	size_t offset;
 };
 
-
-/// A component representing the position, scale, and orientation of an entity
-/// in world space. This component is required for all entities which physically
-/// exist in the world.
-struct ComponentTransform /*: Component<ComponentType::TRANSFORM>*/ {
-	int64_t parent = NO_COMPONENT;
-
-	std::array<float, 3> pos;
-	std::array<float, 3> scale;
-	std::array<float, 4> orientation;
-};
-
-/// A component representing the resources needed to render the entity.
-struct ComponentModel /*: Component<ComponentType::MODEL>*/ {
-	// TODO ICU's typedef int32_t UChar32 is incompatible with U"string" from C++1z, as it returns char32_t[]
-	typedef char32_t UChar32;
-	/// Constant size 128-byte arrays containing UTF-32 resource names.
-	std::array<UChar32, 128> mesh_name;
-	std::array<UChar32, 128> mat_name;
-	std::array<UChar32, 128> shader_name;
+/// Information about a component type.
+struct ComponentTypeInfo {
+	/// A unique power-of-2 id.
+	ComponentId id;
+	/// The byte size of a component of this type.
+	size_t size;
+	/// References to other components.
+	std::array<ComponentRef, 16> refs;
+	/// Ownership of other components.
+	std::array<ComponentOwnership, 16> owns;
+	/// A function which takes a byte array and returns a boost::any containing T*, where T is the component type.
+	std::function<boost::any(char*)> to_any_f;
+	/// A function which takes a const byte array and returns a boost::any const containing a T const*, where T is the component type.
+	std::function<boost::any const(char const*)> to_const_any_f;
+	/// A function which takes a boost::any and returns the contained data as a byte array if the contained type is T, where T is the component type.
+	std::function<char*(boost::any*)> to_data_f;
 };
 } // namespace psi_scene

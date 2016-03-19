@@ -21,6 +21,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include <cstdint>
 
 #include "../thread/task.hpp"
@@ -36,6 +37,8 @@ public:
 
 	void register_system(std::unique_ptr<ISystem>);
 
+	void register_component_type(psi_scene::ComponentTypeInfo);
+
 	void load_scene(void*);
 
 	void update_scene();
@@ -47,14 +50,18 @@ public:
 private:
 	struct SystemStorage {
 		std::unique_ptr<ISystem> sys;
-		uint64_t required_components;
+		psi_scene::ComponentTypeBitset required_components;
+	};
+
+	struct ComponentStorage {
+		std::vector<char> data;
+		size_t stored_n = 0;
 	};
 
 	std::vector<SystemStorage> m_systems;
 
-	std::vector<psi_scene::ComponentEntity> m_scene_entities;
-	std::vector<psi_scene::ComponentTransform> m_scene_transforms;
-	std::vector<psi_scene::ComponentModel> m_scene_models;
+	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
+	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
 
 	psi_thread::ITaskSubmitter* m_tasks;
 };
