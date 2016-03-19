@@ -25,6 +25,8 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <util/assert.hpp>
+
 
 bool gsg::parse_command_line(int argc, char** argv, Environment& store) {
 	po::options_description options("Options");
@@ -62,7 +64,7 @@ bool gsg::parse_command_line(int argc, char** argv, Environment& store) {
 
 	if (!vm.count("directory")) {
 		// wat. should be default "./"
-		assert(false);
+		ASSERT(false);
 		return false;
 	}
 

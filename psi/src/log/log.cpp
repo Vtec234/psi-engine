@@ -114,7 +114,7 @@ static inline std::string header(psi_log::Level lvl, std::string const& module, 
 }
 
 psi_util::Streamer psi_log::log(Level lvl, std::string const& module, std::string const& part) {
-	assert(INITIALIZED);
+	ASSERT(INITIALIZED);
 
 	if (lvl <= MAX_LEVEL) {
         psi_util::Streamer stream([](std::string const& s){

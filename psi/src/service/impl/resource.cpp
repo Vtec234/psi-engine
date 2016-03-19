@@ -29,6 +29,7 @@
 #include <tbb/concurrent_hash_map.h>
 
 #include "../../log/log.hpp"
+#include "../../util/assert.hpp"
 
 
 class ResourceStorage {
@@ -58,7 +59,7 @@ public:
 	void store_load(std::unique_ptr<psi_serv::IResource> res) {
 		std::unique_lock<std::mutex> lock(m_load_mut);
 		// is_loaded must be false and m_res must be empty
-		assert(!m_is_loaded && !m_res);
+		ASSERT(!m_is_loaded && !m_res);
 		m_res = std::move(res);
 		m_is_loaded = true;
 		lock.unlock();
@@ -90,7 +91,7 @@ public:
 
 	/// Returns the stored resource if it was loaded. Assertion fails otherwise.
 	psi_serv::IResource const* resource() const {
-		assert(is_loaded());
+		ASSERT(is_loaded());
 		return m_res.get();
 	}
 
