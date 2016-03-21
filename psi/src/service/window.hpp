@@ -22,10 +22,12 @@
 
 #include <cstdint>
 
+#include "../marker/thread_safety.hpp"
+
 
 namespace psi_serv {
 /// A service which manages a window and all the related events.
-class IWindowService {
+class IWindowService : psi_mark::ConstThreadsafe {
 public:
     /// Polls window events and swaps frame buffers.
     virtual void update_window() = 0;

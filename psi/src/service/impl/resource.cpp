@@ -25,6 +25,7 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <unordered_map>
 
 #include <tbb/concurrent_hash_map.h>
 
@@ -41,8 +42,8 @@ public:
 	ResourceStorage(ResourceStorage const& cpy)
 		: m_is_loaded(cpy.m_is_loaded) {
 		// make deep copy of resource if it was loaded into cpy
-		if (cpy.m_res) {
-			m_res = cpy.m_res->clone();
+		if (cpy.m_is_loaded) {
+			m_res = cpy.m_res;
 		}
 	}
 
@@ -56,10 +57,10 @@ public:
 	}
 
 	/// Store the result of a successful load operation in a newly initialized ResourceStorage.
-	void store_load(std::unique_ptr<psi_serv::IResource> res) {
+	void store_load(boost::any&& res) {
 		std::unique_lock<std::mutex> lock(m_load_mut);
 		// is_loaded must be false and m_res must be empty
-		ASSERT(!m_is_loaded && !m_res);
+		ASSERT(!m_is_loaded);
 		m_res = std::move(res);
 		m_is_loaded = true;
 		lock.unlock();
@@ -90,9 +91,9 @@ public:
 	}
 
 	/// Returns the stored resource if it was loaded. Assertion fails otherwise.
-	psi_serv::IResource const* resource() const {
+	boost::any const& resource() const {
 		ASSERT(is_loaded());
-		return m_res.get();
+		return m_res;
 	}
 
 private:
@@ -100,7 +101,7 @@ private:
 	mutable std::mutex m_load_mut;
 	mutable std::condition_variable m_load_cond;
 
-	std::unique_ptr<psi_serv::IResource> m_res;
+	boost::any m_res;
 };
 
 typedef tbb::concurrent_hash_map<size_t, ResourceStorage>::accessor accessor;
@@ -113,8 +114,8 @@ public:
 
 	~ResourceLock() {}
 
-	psi_serv::IResource const& resource() const {
-		return *(*m_access)->second.resource();
+	boost::any const& resource() const {
+		return (*m_access)->second.resource();
 	}
 
 private:
@@ -126,9 +127,19 @@ public:
 	explicit ResourceLoader(psi_thread::ITaskSubmitter* tasks)
 		: m_task_submitter(tasks) {}
 
+	void register_loader(std::u32string const& type, std::function<boost::any(std::u32string const&)> loader) override {
+		m_loaders[type] = loader;
+	}
+
+	psi_serv::ResourceState request_resource(ResourceId id, std::u32string type, std::u32string location) const override {
+		ASSERT(m_loaders.count(type));
+
+		return request_resource(id, [&,this]()->boost::any{ return (m_loaders.at(type))(location); });
+	}
+
 	psi_serv::ResourceState request_resource(
 	size_t h,
-	std::function<std::unique_ptr<psi_serv::IResource>()> loader
+	std::function<boost::any()> loader
 	) const override {
 		// check whether the resource is already in map
 		const_accessor access;
@@ -147,7 +158,7 @@ public:
 				access.release();
 
 				// try to load the resource
-				std::unique_ptr<psi_serv::IResource> res;
+				boost::any res;
 				try {
 					res = loader();
 				}
@@ -172,7 +183,7 @@ public:
 		return psi_serv::ResourceState::Loading;
 	}
 
-	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> wait_for_resource(size_t hash) const override {
+	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> retrieve_resource(size_t hash) const override {
 		auto access = std::make_unique<const_accessor>();
 		m_resources.find(*access, hash);
 		if (access->empty())
@@ -198,6 +209,8 @@ public:
 	};
 
 private:
+	std::unordered_map<std::u32string, std::function<boost::any(std::u32string const&)>> m_loaders;
+
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
 	psi_thread::ITaskSubmitter const* m_task_submitter;
 };

@@ -77,11 +77,16 @@ int main(int argc, char** argv) {
 		true,
 	}));
 
+	// TODO these
+	services.resource_service().register_loader(U"mesh", [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(U"material", [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(U"shader", [](std::u32string const& s)->auto{ return nullptr; });
+
 	psi_sys::SystemManager systems(task_manager.get());
 	systems.register_component_type(psi_scene::component_type_entity_info);
 	systems.register_component_type(psi_scene::component_type_model_info);
 	systems.register_component_type(psi_scene::component_type_transform_info);
-	systems.register_system(psi_sys::start_gl_renderer());
+	systems.register_system(psi_sys::start_gl_renderer(*task_manager, services));
 	systems.load_scene(nullptr);
 
 	// TODO cap FPS

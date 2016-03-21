@@ -23,8 +23,9 @@
 #include <memory>
 
 #include "../system.hpp"
-
+#include "../../thread/task.hpp"
+#include "../../service/manager.hpp"
 
 namespace psi_sys {
-std::unique_ptr<ISystem> start_gl_renderer();
+std::unique_ptr<ISystem> start_gl_renderer(psi_thread::ITaskSubmitter const&, psi_serv::ServiceManager const&);
 } // namespace psi_sys

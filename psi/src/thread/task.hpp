@@ -23,10 +23,12 @@
 #include <cstdint>
 #include <functional>
 
+#include "../marker/thread_safety.hpp"
+
 
 namespace psi_thread {
 /// An interface which  accepts tasks and manages them. They might potentially run in parallel.
-class ITaskSubmitter {
+class ITaskSubmitter : psi_mark::ConstThreadsafe {
 public:
 	/// Starts a task which will potentially be run asynchronously.
 	/// @return the task ID

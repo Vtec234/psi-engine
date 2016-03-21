@@ -26,6 +26,9 @@
 #include <memory>
 
 #include <boost/optional.hpp>
+#include <boost/any.hpp>
+
+#include "../marker/thread_safety.hpp"
 
 
 namespace psi_serv {
@@ -39,41 +42,49 @@ enum class ResourceState {
     Available,
 };
 
-/// An abstract class representing a resource.
-class IResource {
-public:
-	virtual ~IResource() {};
-
-	virtual std::unique_ptr<IResource> clone() const = 0;
-};
-
 /// An abstract class representing a read-lock on a resource.
 /// Destroying this object releases the lock and allows potential modifications to the resource.
-class IResourceLock {
+class IResourceLock : psi_mark::NonThreadsafe {
 public:
     virtual ~IResourceLock() {};
 
-    virtual IResource const& resource() const = 0;
+    virtual boost::any const& resource() const = 0;
 };
 
 /// A thread-safe service which loads and manages resources.
-class IResourceService {
+class IResourceService : psi_mark::ConstThreadsafe {
 public:
-    /// Requests a resource to be loaded.
+	using ResourceId = size_t;
+
+	/// Registers a loader function which will be used to load all resources of the specified type.
+	/// Replaces previous loader if type was already registered.
+	/// @param[in] type   resource type
+	/// @param[in] loader a thread-safe loader function
+	virtual void register_loader(std::u32string const& type, std::function<boost::any(std::u32string const&)> loader) = 0;
+
+	/// Requests a resource of the specified type to be loaded.
+	/// @param[in] id       resource storage id to load into
+	/// @param[in] type     resource type
+	/// @param[in] location resource location
+	/// @warning Assertion failure on unregistered type.
+	virtual ResourceState request_resource(ResourceId id, std::u32string type, std::u32string location) const = 0;
+
+    /// Requests a resource to be loaded using the given function.
 	/// @throw When input is invalid or loading is otherwise prevented.
 	/// @return Loading if loading began. Available if index is already in use.
-	virtual ResourceState request_resource(size_t, std::function<std::unique_ptr<IResource>()>) const = 0;
+	virtual ResourceState request_resource(ResourceId id, std::function<boost::any()>) const = 0;
 
-    /// Waits until the resource finishes loading.
+	/// Tries to retrieve the resource with the specified id.
+    /// Waits until the resource finishes loading if it is.
 	/// @return A read-lock on the resource or empty optional if resource is not currently Loading/Available.
-	virtual boost::optional<std::unique_ptr<IResourceLock>> wait_for_resource(size_t) const = 0;
+	virtual boost::optional<std::unique_ptr<IResourceLock>> retrieve_resource(ResourceId id) const = 0;
 
 	/// Queries the state of the resource.
 	/// @return The queried state.
-    virtual ResourceState resource_state(size_t) const = 0;
+    virtual ResourceState resource_state(ResourceId id) const = 0;
 
 	/// Frees the resource if it is Available. Stops loading and frees it if it is Loading. Blocks.
 	/// @return What the state was before freeing.
-    virtual ResourceState free_resource(size_t) const = 0;
+    virtual ResourceState free_resource(ResourceId id) const = 0;
 };
 } // namespace psi_serv

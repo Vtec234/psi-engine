@@ -24,12 +24,13 @@
 
 #include <boost/any.hpp>
 
+#include "../marker/thread_safety.hpp"
 #include "components.hpp"
 
 
 namespace psi_scene {
 /// Provides direct access to the scene. The scene contains only the components required by the system.
-class ISceneDirectAccess {
+class ISceneDirectAccess : psi_mark::NonThreadsafe {
 public:
 	/// Obtains a read-only constant reference to a component of the requested type.
 	/// @param[in] t  component type

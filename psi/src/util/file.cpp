@@ -22,16 +22,15 @@
 
 #include <fstream>
 
-#include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
 
-std::vector<std::string> psi_util::load_text(std::string const& file) {
+std::vector<std::string> psi_util::load_text(fs::path const& file) {
 	// try to open input stream
-	std::ifstream in_file(file);
+	std::ifstream in_file(file.c_str());
 	if (!in_file.good()) {
 		in_file.close();
-		throw std::runtime_error("Failed to open text file " + file + ".");
+		throw std::runtime_error("Failed to open text file " + file.string() + ".");
 	}
 
 	// read line by line
@@ -47,22 +46,22 @@ std::vector<std::string> psi_util::load_text(std::string const& file) {
 	return contents;
 }
 
-std::vector<uint8_t> psi_util::load_binary(std::string const& file) {
+std::vector<char> psi_util::load_binary(fs::path const& file) {
 	// might throw, pass exception if it does
 	auto size = fs::file_size(file);
 
 	// allocate memory of file size
-	std::vector<uint8_t> bin(size);
+	std::vector<char> bin(size);
 
 	// try to open binary input stream
-	std::ifstream in_file(file, std::ios::in | std::ios::binary);
+	std::ifstream in_file(file.c_str(), std::ios::in | std::ios::binary);
 	if (!in_file.good()) {
 		in_file.close();
-		throw std::runtime_error("Failed to open binary file " + file + ".");
+		throw std::runtime_error("Failed to open binary file " + file.string() + ".");
 	}
 
 	// copy whole file into vector
-	in_file.read(reinterpret_cast<char*>(bin.data()), size);
+	in_file.read(bin.data(), size);
 
 	// close file and return contents
 	in_file.close();

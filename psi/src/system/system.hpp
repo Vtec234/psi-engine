@@ -26,9 +26,11 @@
 #include "../scene/access.hpp"
 #include "../scene/components.hpp"
 
+#include "../marker/thread_safety.hpp"
+
 
 namespace psi_sys {
-class ISystem {
+class ISystem : psi_mark::NonThreadsafe {
 public:
 	/// Bitmask of SceneComponentType. Only the required types will be provided to the system.
 	virtual psi_scene::ComponentTypeBitset required_components() const = 0;

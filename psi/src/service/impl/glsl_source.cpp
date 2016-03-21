@@ -89,8 +89,8 @@ std::string psi_serv::GLSLSource::uniform_type(UniformMapping map) {
 	}
 }
 
-std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
-	auto obj = std::make_unique<GLSLSource>();
+boost::any psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
+	GLSLSource obj;
 
 	// idea was to require #type, but now it seems to rigid
 	// ie one file can't be used as two types of shader
@@ -155,7 +155,7 @@ std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::construct_from_source
 							throw std::runtime_error("line " + std::to_string(i_line + 2) + ":\nUniform type " + unif_type_str + " does not match mapped resource type " + uniform_type(map) + ".");
 
 						// just insert. one mapping can map to many uniforms
-						obj->m_unifs.insert(std::make_pair(map, unif_name_str));
+						obj.m_unifs.insert(std::make_pair(map, unif_name_str));
 					}
 					// line below is a uniform block
 					else if (regex_search(line_below, result, block_rgx)) {
@@ -180,7 +180,7 @@ std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::construct_from_source
 						// checking would require a complicated parser of the block contents
 
 						// just insert block. one mapping can map to many blocks
-						obj->m_unif_blocks.insert(std::make_pair(block_map, result_str));
+						obj.m_unif_blocks.insert(std::make_pair(block_map, result_str));
 					}
 					// line below #map is neither a uniform nor a block
 					else
@@ -202,33 +202,29 @@ std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::construct_from_source
 			// sources are put into their respective string based upon their position in the array
 			switch (static_cast<SourceTypeInArray>(i_src)) {
 			case SourceTypeInArray::VERTEX:
-				obj->m_vertex = src_concat;
+				obj.m_vertex = src_concat;
 				break;
 			case SourceTypeInArray::FRAGMENT:
-				obj->m_fragment = src_concat;
+				obj.m_fragment = src_concat;
 				break;
 			case SourceTypeInArray::GEOMETRY:
-				obj->m_geometry = src_concat;
+				obj.m_geometry = src_concat;
 				break;
 			case SourceTypeInArray::TESSELATION_CONTROL:
-				obj->m_tess_ctrl = src_concat;
+				obj.m_tess_ctrl = src_concat;
 				break;
 			case SourceTypeInArray::TESSELATION_EVALUATION:
-				obj->m_tess_eval = src_concat;
+				obj.m_tess_eval = src_concat;
 				break;
 			case SourceTypeInArray::COMPUTE:
-				obj->m_compute = src_concat;
+				obj.m_compute = src_concat;
 				break;
 			}
 		}
 	}
 
-	IResource* p = obj.release();
-	return std::unique_ptr<IResource>(p);
-}
-
-std::unique_ptr<psi_serv::IResource> psi_serv::GLSLSource::clone() const {
-	return std::unique_ptr<GLSLSource>(new GLSLSource(*this));
+	// in case it tries copying or something
+	return std::move(obj);
 }
 
 std::string const& psi_serv::GLSLSource::vertex_shader() const {

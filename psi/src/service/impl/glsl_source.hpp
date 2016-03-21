@@ -82,7 +82,7 @@ struct hash<psi_serv::UniformBlockMapping> {
 
 namespace psi_serv {
 /// A resource class representing the whole source (vertex, fragment, etc.) of a single GLSL shader.
-class GLSLSource : public IResource {
+class GLSLSource {
 public:
 	/// Returns the string representation of the GLSL uniform type that a given UniformMapping has.
 	/// @return the string or "" if invalid value is passed
@@ -108,11 +108,9 @@ public:
 	///		[5] - compute
 	/// @throw if anything is wrong with the sources
 	/// @return a parsed version of the source in a GLSLSource instance
-	static std::unique_ptr<IResource> construct_from_sources(std::array<std::vector<std::string>, 6> const& sources);
+	static boost::any construct_from_sources(std::array<std::vector<std::string>, 6> const& sources);
 
 	~GLSLSource() = default;
-
-	std::unique_ptr<IResource> clone() const override;
 
 	std::string const& vertex_shader() const;
 	std::string const& fragment_shader() const;
