@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 		640,
 		480,
 		8,
-		"UltraWindow3600-K Ultimate Edition Beta v.2.5.7",
+		"UltraWindow3600-K Ultimate Edition Beta v.0.0.1",
 		true,
 		true,
 		true,
