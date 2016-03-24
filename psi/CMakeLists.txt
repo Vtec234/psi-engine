@@ -9,7 +9,6 @@ set(SOURCE_FILES
 	src/scene/impl/default_components.hpp
 	src/scene/access.hpp
 	src/scene/components.hpp
-	src/service/impl/glsl_source.cpp src/service/impl/glsl_source.hpp
 	src/service/impl/resource.cpp src/service/impl/resource.hpp
 	src/service/impl/window_gl.cpp src/service/impl/window_gl.hpp
 	src/service/manager.cpp src/service/manager.hpp
@@ -21,8 +20,10 @@ set(SOURCE_FILES
 	src/thread/impl/manager.cpp src/thread/impl/manager.hpp
 	src/thread/task.hpp
 	src/util/assert.hpp
+	src/util/data.hpp
 	src/util/file.cpp src/util/file.hpp
 	src/util/gl.cpp src/util/gl.hpp
+	src/util/glsl_source.cpp src/util/glsl_source.hpp
 	src/util/stream.cpp src/util/stream.hpp
 )
 

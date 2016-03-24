@@ -61,14 +61,14 @@ public:
 	/// Replaces previous loader if type was already registered.
 	/// @param[in] type   resource type
 	/// @param[in] loader a thread-safe loader function
-	virtual void register_loader(ResourceType type, std::function<boost::any(std::u32string const&)> loader) = 0;
+	virtual void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) = 0;
 
 	/// Requests a resource of the specified type to be loaded.
 	/// @param[in] h     resource storage handle to load into
 	/// @param[in] type  resource type
 	/// @param[in] param UTF-32 string parameter passed to the loader
 	/// @warning Assertion failure on unregistered type.
-	virtual ResourceState request_resource(ResourceHandle h, ResourceType, std::u32string param) const = 0;
+	virtual ResourceState request_resource(ResourceHandle h, ResourceType, std::string param) const = 0;
 
     /// Requests a resource to be loaded using the given function.
 	/// @throw When input is invalid or loading is otherwise prevented.

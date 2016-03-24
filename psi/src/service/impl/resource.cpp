@@ -127,11 +127,11 @@ public:
 	explicit ResourceLoader(psi_thread::ITaskSubmitter* tasks)
 		: m_task_submitter(tasks) {}
 
-	void register_loader(ResourceType type, std::function<boost::any(std::u32string const&)> loader) override {
+	void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) override {
 		m_loaders[type] = loader;
 	}
 
-	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceType type, std::u32string location) const override {
+	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceType type, std::string location) const override {
 		ASSERT(m_loaders.count(type));
 
 		return request_resource(h, [&,this]()->boost::any{ return (m_loaders.at(type))(location); });
@@ -209,7 +209,7 @@ public:
 	};
 
 private:
-	std::unordered_map<ResourceType, std::function<boost::any(std::u32string const&)>> m_loaders;
+	std::unordered_map<ResourceType, std::function<boost::any(std::string const&)>> m_loaders;
 
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
 	psi_thread::ITaskSubmitter const* m_task_submitter;

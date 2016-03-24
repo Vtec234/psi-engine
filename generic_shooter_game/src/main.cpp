@@ -20,13 +20,13 @@
 
 #include <array>
 #include <string>
+#include <locale>
 
 #include <log/log.hpp>
 #include <thread/impl/manager.hpp>
 #include <service/manager.hpp>
 #include <service/impl/resource.hpp>
 #include <util/file.hpp>
-#include <service/impl/glsl_source.hpp>
 #include <service/impl/window_gl.hpp>
 #include <system/manager.hpp>
 #include <scene/impl/default_components.hpp>
@@ -49,24 +49,6 @@ int main(int argc, char** argv) {
 		task_manager.get(),
 	}));
 
-	try {
-		auto status = services.resource_service().request_resource(
-		std::hash<std::string>()("/glsl/box.vert"),
-			[&]() {
-				std::array<std::vector<std::string>, 6> srcs;
-
-				srcs[0] = psi_util::load_text(env.resource_dir.string() + "/glsl/box.vert");
-				srcs[1] = psi_util::load_text(env.resource_dir.string() + "/glsl/box.frag");
-
-				return psi_serv::GLSLSource::construct_from_sources(srcs);
-			}
-		);
-	}
-	catch (std::exception const& e) {
-		psi_log::error("main") << e.what() << "\n";
-		return 1;
-	}
-
 	services.set_window_service(psi_serv::start_gl_window_service(psi_serv::GLWindowServiceArgs{
 		640,
 		480,
@@ -78,9 +60,9 @@ int main(int argc, char** argv) {
 	}));
 
 	// TODO these
-	services.resource_service().register_loader(std::hash<std::u32string>()(U"mesh"), [](std::u32string const& s)->auto{ return nullptr; });
-	services.resource_service().register_loader(std::hash<std::u32string>()(U"material"), [](std::u32string const& s)->auto{ return nullptr; });
-	services.resource_service().register_loader(std::hash<std::u32string>()(U"shader"), [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(std::hash<std::string>()(u8"mesh"), [](std::string const& s)->auto{ return psi_util::load_mesh(s); });
+	services.resource_service().register_loader(std::hash<std::string>()(u8"material"), [](std::string const& s)->auto{ return psi_util::load_text(s); });
+	services.resource_service().register_loader(std::hash<std::string>()(u8"shader"), [](std::string const& s)->auto{ return psi_util::load_glsl(s); });
 
 	psi_sys::SystemManager systems(task_manager.get());
 	systems.register_component_type(psi_scene::component_type_entity_info);

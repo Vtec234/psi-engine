@@ -24,7 +24,7 @@
 
 
 // -- UniformMapping --
-psi_serv::UniformMapping psi_serv::uniform_mapping_from_name(std::string const& name) {
+psi_util::UniformMapping psi_util::uniform_mapping_from_name(std::string const& name) {
 	// TODO do dis wit templates?
 	#define UMAP(s) if(name == #s) return UniformMapping::s;
 	UMAP(LOCAL_TO_CLIP)
@@ -47,7 +47,7 @@ psi_serv::UniformMapping psi_serv::uniform_mapping_from_name(std::string const& 
 }
 
 // -- UniformBlockMapping --
-psi_serv::UniformBlockMapping psi_serv::uniform_block_mapping_from_name(std::string const& name) {
+psi_util::UniformBlockMapping psi_util::uniform_block_mapping_from_name(std::string const& name) {
 	#define UBMAP(s) if (name == #s) return UniformBlockMapping::s;
 	UBMAP(LIGHT_DATA)
 
@@ -55,7 +55,7 @@ psi_serv::UniformBlockMapping psi_serv::uniform_block_mapping_from_name(std::str
 }
 
 // -- GLSLSource --
-std::string psi_serv::GLSLSource::uniform_type(UniformMapping map) {
+std::string psi_util::GLSLSource::uniform_type(UniformMapping map) {
 	switch(map) {
 	case UniformMapping::LOCAL_TO_CLIP:
 	case UniformMapping::LOCAL_TO_WORLD:
@@ -89,7 +89,7 @@ std::string psi_serv::GLSLSource::uniform_type(UniformMapping map) {
 	}
 }
 
-boost::any psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
+psi_util::GLSLSource psi_util::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
 	GLSLSource obj;
 
 	// idea was to require #type, but now it seems to rigid
@@ -142,9 +142,9 @@ boost::any psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<s
 						unif_type_str.erase(remove_if(unif_type_str.begin(), unif_type_str.end(), isspace), unif_type_str.end());
 
 						// find uniform mapping enum
-						psi_serv::UniformMapping map;
+						psi_util::UniformMapping map;
 						try {
-							map = psi_serv::uniform_mapping_from_name(map_str);
+							map = psi_util::uniform_mapping_from_name(map_str);
 						}
 						catch (std::exception const& e) {
 							throw std::runtime_error("line " + std::to_string(i_line + 1) + ":\n" + e.what());
@@ -168,9 +168,9 @@ boost::any psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<s
 						result_str = result_str.substr(7);
 
 						// try to find uniform block mapping enum
-						psi_serv::UniformBlockMapping block_map;
+						psi_util::UniformBlockMapping block_map;
 						try {
-							block_map = psi_serv::uniform_block_mapping_from_name(result_str);
+							block_map = psi_util::uniform_block_mapping_from_name(result_str);
 						}
 						catch (std::exception const& e) {
 							throw std::runtime_error("line " + std::to_string(i_line + 1) + ":\n" + e.what());
@@ -224,37 +224,37 @@ boost::any psi_serv::GLSLSource::construct_from_sources(std::array<std::vector<s
 	}
 
 	// in case it tries copying or something
-	return std::move(obj);
+	return obj;
 }
 
-std::string const& psi_serv::GLSLSource::vertex_shader() const {
+std::string const& psi_util::GLSLSource::vertex_shader() const {
 	return m_vertex;
 }
 
-std::string const& psi_serv::GLSLSource::fragment_shader() const {
+std::string const& psi_util::GLSLSource::fragment_shader() const {
 	return m_fragment;
 }
 
-boost::optional<std::string> const& psi_serv::GLSLSource::geometry_shader() const {
+boost::optional<std::string> const& psi_util::GLSLSource::geometry_shader() const {
 	return m_geometry;
 }
 
-boost::optional<std::string> const& psi_serv::GLSLSource::tess_control_shader() const{
+boost::optional<std::string> const& psi_util::GLSLSource::tess_control_shader() const{
 	return m_tess_ctrl;
 }
 
-boost::optional<std::string> const& psi_serv::GLSLSource::tess_eval_shader() const {
+boost::optional<std::string> const& psi_util::GLSLSource::tess_eval_shader() const {
 	return m_tess_eval;
 }
 
-boost::optional<std::string> const& psi_serv::GLSLSource::compute_shader() const {
+boost::optional<std::string> const& psi_util::GLSLSource::compute_shader() const {
 	return m_compute;
 }
 
-std::unordered_multimap<psi_serv::UniformMapping, std::string> const& psi_serv::GLSLSource::mapped_uniforms() const {
+std::unordered_multimap<psi_util::UniformMapping, std::string> const& psi_util::GLSLSource::mapped_uniforms() const {
 	return m_unifs;
 }
 
-std::unordered_multimap<psi_serv::UniformBlockMapping, std::string> const& psi_serv::GLSLSource::mapped_uniform_blocks() const {
+std::unordered_multimap<psi_util::UniformBlockMapping, std::string> const& psi_util::GLSLSource::mapped_uniform_blocks() const {
 	return m_unif_blocks;
 }

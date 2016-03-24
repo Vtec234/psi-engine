@@ -25,15 +25,28 @@
 
 #include <boost/filesystem.hpp>
 
+#include "data.hpp"
+#include "glsl_source.hpp"
+
 
 namespace psi_util {
 	/// Tries to load a text file from the specified path.
-	/// @throw if the file does not exist, is invalid, or otherwise occupied
-	/// @return a vector of lines from this file
+	/// @throws if the file does not exist, is invalid, or otherwise occupied
+	/// @returns a vector of lines from this file
 	std::vector<std::string> load_text(boost::filesystem::path const& file);
 
 	/// Tries to load a binary file from the specified path.
-	/// @throw if the file does not exist, is invalid, or otherwise occupied
-	/// @return a vector containing the data from this file
+	/// @throws if the file does not exist, is invalid, or otherwise occupied
+	/// @returns a vector containing the data from this file
 	std::vector<char> load_binary(boost::filesystem::path const& file);
+
+	/// Tries to load a mesh stored in the Psi Engine Mesh .msh format.
+	/// @throws if the file does not exist, is invalid, or otherwise occupied
+	/// @returns the mesh data
+	psi_util::MeshData load_mesh(boost::filesystem::path const& file);
+
+	/// Tries to load a GLSL source stored in plaintext format.
+	/// @throws if the file does not exist, is invalid, or otherwise occupied
+	/// @returns the GLSL source
+	psi_util::GLSLSource load_glsl(boost::filesystem::path const& file);
 } // namespace psi_util

@@ -67,3 +67,61 @@ std::vector<char> psi_util::load_binary(fs::path const& file) {
 	in_file.close();
 	return bin;
 }
+
+psi_util::MeshData psi_util::load_mesh(boost::filesystem::path const& file) {
+	// might throw, pass exception if it does
+	auto data = load_binary(file);
+
+	MeshData mesh;
+
+	// format:
+	// 8 bytes - vertex count
+	// 8 bytes- index count
+	// 24 bytes - bounding box
+	// 1 byte null char
+	// vertices (count * sizeof(VertexData))
+	// 1 byte null char
+	// indices (count * 4 bytes)
+	// 1 byte null char
+	char const* ptr = data.data();
+	size_t verts = *reinterpret_cast<uint64_t const*>(ptr);
+	ptr += sizeof(uint64_t) / sizeof(char);
+	size_t inds = *reinterpret_cast<uint64_t const*>(ptr);
+	ptr += sizeof(uint64_t) / sizeof(char);
+	auto bbptr = reinterpret_cast<float const*>(ptr);
+	mesh.max_pos[0] = *(bbptr++);
+	mesh.max_pos[1] = *(bbptr++);
+	mesh.max_pos[2] = *(bbptr++);
+	mesh.min_pos[0] = *(bbptr++);
+	mesh.min_pos[1] = *(bbptr++);
+	mesh.min_pos[2] = *(bbptr++);
+	ptr = reinterpret_cast<char const*>(bbptr);
+	if (*ptr != '\0') {
+		throw std::runtime_error("Invalid data in mesh file " + file.string() + ".");
+	}
+	ptr += sizeof(char);
+	mesh.vertices.resize(verts);
+	memcpy(mesh.vertices.data(), ptr, verts * sizeof(psi_util::VertexData));
+	ptr += verts * sizeof(psi_util::VertexData);
+	if (*ptr != '\0') {
+		throw std::runtime_error("Invalid data in mesh file " + file.string() + ".");
+	}
+	ptr += sizeof(char);
+	mesh.indices.resize(inds);
+	memcpy(mesh.indices.data(), ptr, inds * sizeof(uint32_t));
+	ptr += inds * sizeof(uint32_t);
+	if (*ptr != '\0') {
+		throw std::runtime_error("Invalid data in mesh file " + file.string() + ".");
+	}
+
+	return mesh;
+}
+
+// TODO this and store a single shader in one file instead of .vert, .frag, etc
+psi_util::GLSLSource psi_util::load_glsl(boost::filesystem::path const& file) {
+	std::array<std::vector<std::string>, 6> sources;
+	sources[0] = load_text(file.string() + ".vert");
+	sources[1] = load_text(file.string() + ".frag");
+
+	return GLSLSource::construct_from_sources(sources);
+}

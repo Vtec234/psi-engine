@@ -23,11 +23,10 @@
 #include <unordered_map>
 
 #include <boost/optional.hpp>
+#include <boost/any.hpp>
 
-#include "../resource.hpp"
 
-
-namespace psi_serv {
+namespace psi_util {
 /// A resource that a uniform in a shader may be attached to.
 /// The value of this resource will be sent to the shader at runtime.
 enum class UniformMapping {
@@ -66,21 +65,21 @@ UniformBlockMapping uniform_block_mapping_from_name(std::string const&);
 // stupid std hash breaking my namespace apart
 namespace std {
 template <>
-struct hash<psi_serv::UniformMapping> {
-	size_t operator()(psi_serv::UniformMapping const& m) const {
+struct hash<psi_util::UniformMapping> {
+	size_t operator()(psi_util::UniformMapping const& m) const {
 		return static_cast<size_t>(m);
 	}
 };
 
 template <>
-struct hash<psi_serv::UniformBlockMapping> {
-	size_t operator()(psi_serv::UniformBlockMapping const& m) const {
+struct hash<psi_util::UniformBlockMapping> {
+	size_t operator()(psi_util::UniformBlockMapping const& m) const {
 		return static_cast<size_t>(m);
 	}
 };
 } // namespace std
 
-namespace psi_serv {
+namespace psi_util {
 /// A resource class representing the whole source (vertex, fragment, etc.) of a single GLSL shader.
 class GLSLSource {
 public:
@@ -108,7 +107,7 @@ public:
 	///		[5] - compute
 	/// @throw if anything is wrong with the sources
 	/// @return a parsed version of the source in a GLSLSource instance
-	static boost::any construct_from_sources(std::array<std::vector<std::string>, 6> const& sources);
+	static GLSLSource construct_from_sources(std::array<std::vector<std::string>, 6> const& sources);
 
 	~GLSLSource() = default;
 
@@ -137,4 +136,4 @@ private:
 	std::unordered_multimap<UniformMapping, std::string> m_unifs;
 	std::unordered_multimap<UniformBlockMapping, std::string> m_unif_blocks;
 };
-} // namespace psi_serv
+} // namespace psi_util

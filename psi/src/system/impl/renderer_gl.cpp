@@ -72,9 +72,10 @@ public:
 			if (ent->model != psi_scene::NO_COMPONENT) {
 				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
 				// load resources in entity
-				m_serv.resource_service().request_resource(std::hash<std::u32string>()(model->mesh_name.data()), std::hash<std::u32string>()(U"mesh"), model->mesh_name.data());
-				m_serv.resource_service().request_resource(std::hash<std::u32string>()(model->mat_name.data()), std::hash<std::u32string>()(U"mesh"), model->mat_name.data());
-				m_serv.resource_service().request_resource(std::hash<std::u32string>()(model->shader_name.data()), std::hash<std::u32string>()(U"mesh"), model->shader_name.data());
+				// TODO convert UTF-32 to UTF-8 here to load the resources
+				//m_serv.resource_service().request_resource(std::hash<std::string>()(model->mesh_name.data()), std::hash<std::u32string>()(U"mesh"), model->mesh_name.data());
+				//m_serv.resource_service().request_resource(std::hash<std::string>()(model->mat_name.data()), std::hash<std::u32string>()(U"mesh"), model->mat_name.data());
+				//m_serv.resource_service().request_resource(std::hash<std::string>()(model->shader_name.data()), std::hash<std::u32string>()(U"mesh"), model->shader_name.data());
 			}
 		}
 		/* setup ambient light
