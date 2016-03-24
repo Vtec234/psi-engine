@@ -78,9 +78,9 @@ int main(int argc, char** argv) {
 	}));
 
 	// TODO these
-	services.resource_service().register_loader(U"mesh", [](std::u32string const& s)->auto{ return nullptr; });
-	services.resource_service().register_loader(U"material", [](std::u32string const& s)->auto{ return nullptr; });
-	services.resource_service().register_loader(U"shader", [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(std::hash<std::u32string>()(U"mesh"), [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(std::hash<std::u32string>()(U"material"), [](std::u32string const& s)->auto{ return nullptr; });
+	services.resource_service().register_loader(std::hash<std::u32string>()(U"shader"), [](std::u32string const& s)->auto{ return nullptr; });
 
 	psi_sys::SystemManager systems(task_manager.get());
 	systems.register_component_type(psi_scene::component_type_entity_info);

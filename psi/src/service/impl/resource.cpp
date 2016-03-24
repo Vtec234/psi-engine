@@ -127,18 +127,18 @@ public:
 	explicit ResourceLoader(psi_thread::ITaskSubmitter* tasks)
 		: m_task_submitter(tasks) {}
 
-	void register_loader(std::u32string const& type, std::function<boost::any(std::u32string const&)> loader) override {
+	void register_loader(ResourceType type, std::function<boost::any(std::u32string const&)> loader) override {
 		m_loaders[type] = loader;
 	}
 
-	psi_serv::ResourceState request_resource(ResourceId id, std::u32string type, std::u32string location) const override {
+	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceType type, std::u32string location) const override {
 		ASSERT(m_loaders.count(type));
 
-		return request_resource(id, [&,this]()->boost::any{ return (m_loaders.at(type))(location); });
+		return request_resource(h, [&,this]()->boost::any{ return (m_loaders.at(type))(location); });
 	}
 
 	psi_serv::ResourceState request_resource(
-	size_t h,
+	ResourceHandle h,
 	std::function<boost::any()> loader
 	) const override {
 		// check whether the resource is already in map
@@ -183,9 +183,9 @@ public:
 		return psi_serv::ResourceState::Loading;
 	}
 
-	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> retrieve_resource(size_t hash) const override {
+	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> retrieve_resource(ResourceHandle h) const override {
 		auto access = std::make_unique<const_accessor>();
-		m_resources.find(*access, hash);
+		m_resources.find(*access, h);
 		if (access->empty())
 			return boost::optional<std::unique_ptr<psi_serv::IResourceLock>>();
 
@@ -194,9 +194,9 @@ public:
 		return boost::optional<std::unique_ptr<psi_serv::IResourceLock>> (std::make_unique<ResourceLock>(std::move(access)));
 	}
 
-	psi_serv::ResourceState resource_state(size_t hash) const override {
+	psi_serv::ResourceState resource_state(ResourceHandle h) const override {
 		const_accessor access;
-		m_resources.find(access, hash);
+		m_resources.find(access, h);
 		if (access.empty())
 			return psi_serv::ResourceState::Unavailable;
 
@@ -204,12 +204,12 @@ public:
 	}
 
 	// TODO this method
-	psi_serv::ResourceState free_resource(size_t hash) const override {
+	psi_serv::ResourceState free_resource(ResourceHandle h) const override {
 		return psi_serv::ResourceState::Unavailable;
 	};
 
 private:
-	std::unordered_map<std::u32string, std::function<boost::any(std::u32string const&)>> m_loaders;
+	std::unordered_map<ResourceType, std::function<boost::any(std::u32string const&)>> m_loaders;
 
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
 	psi_thread::ITaskSubmitter const* m_task_submitter;
