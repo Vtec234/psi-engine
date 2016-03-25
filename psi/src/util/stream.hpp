@@ -24,10 +24,12 @@
 #include <functional>
 #include <cstdint>
 
+#include "../marker/thread_safety.hpp"
+
 
 namespace psi_util {
 /// A class which stores all the input in an internal buffer and outputs it to the given function on destruction.
-class Streamer {
+class Streamer : psi_mark::NonThreadsafe {
 public:
 	explicit Streamer(std::function<void(std::string const&)> out);
 	~Streamer();

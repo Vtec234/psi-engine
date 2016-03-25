@@ -137,7 +137,7 @@ public:
 	}
 };
 
-SystemManager::SystemManager(psi_thread::ITaskSubmitter* tasks)
+SystemManager::SystemManager(psi_thread::TaskManager const& tasks)
 	: m_tasks(tasks) {}
 
 void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
@@ -158,7 +158,7 @@ void SystemManager::load_scene(void*) {
 	std::vector<uint64_t> tasks;
 	for (auto& sys : m_systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks->submit_task([&, this]{
+		auto id = m_tasks.submit_task([&, this]{
 			for (auto& info : m_types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
@@ -177,7 +177,7 @@ void SystemManager::load_scene(void*) {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks->wait_for_task(task);
+		m_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES
@@ -187,7 +187,7 @@ void SystemManager::update_scene() {
 	std::vector<uint64_t> tasks;
 	for (auto& sys : m_systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks->submit_task([&, this]{
+		auto id = m_tasks.submit_task([&, this]{
 			for (auto& info : m_types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
@@ -206,7 +206,7 @@ void SystemManager::update_scene() {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks->wait_for_task(task);
+		m_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES
@@ -216,7 +216,7 @@ void SystemManager::save_scene() {
 	std::vector<uint64_t> tasks;
 	for (auto& sys : m_systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks->submit_task([&, this]{
+		auto id = m_tasks.submit_task([&, this]{
 			for (auto& info : m_types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
@@ -235,7 +235,7 @@ void SystemManager::save_scene() {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks->wait_for_task(task);
+		m_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES

@@ -18,14 +18,21 @@
  *
  */
 
-#pragma once
+#include "manager.hpp"
 
-#include <memory>
 
-#include "../system.hpp"
-#include "../../thread/task.hpp"
-#include "../../service/manager.hpp"
+uint64_t psi_thread::TaskManager::submit_task(std::function<void()> f) const {
+	// such threading
+	// much concurrency
+	// wow
+	f();
+	return 0;
+}
 
-namespace psi_sys {
-std::unique_ptr<ISystem> start_gl_renderer(psi_thread::ITaskSubmitter const&, psi_serv::ServiceManager const&);
-} // namespace psi_sys
+bool psi_thread::TaskManager::wait_for_task(uint64_t) const {
+	return false;
+}
+
+bool psi_thread::TaskManager::is_task_running(uint64_t) const {
+	return false;
+}

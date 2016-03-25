@@ -22,9 +22,10 @@
 
 #include <memory>
 
-#include "../task.hpp"
+#include "../../system/system.hpp"
+#include "../../thread/manager.hpp"
+#include "../../service/manager.hpp"
 
-
-namespace psi_thread {
-std::unique_ptr<ITaskSubmitter> start_default_task_manager();
-} // namespace psi_thread
+namespace psi_sys {
+std::unique_ptr<ISystem> start_gl_renderer(psi_thread::TaskManager const&, psi_serv::ServiceManager const&);
+} // namespace psi_sys

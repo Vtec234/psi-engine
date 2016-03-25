@@ -23,14 +23,8 @@
 #include <locale>
 
 #include <log/log.hpp>
-#include <thread/impl/manager.hpp>
-#include <service/manager.hpp>
-#include <service/impl/resource.hpp>
-#include <util/file.hpp>
-#include <service/impl/window_gl.hpp>
+#include <impl/impl.hpp>
 #include <system/manager.hpp>
-#include <scene/impl/default_components.hpp>
-#include <system/impl/renderer_gl.hpp>
 
 #include "env/environment.hpp"
 
@@ -42,11 +36,11 @@ int main(int argc, char** argv) {
 
 	psi_log::init(env.working_dir, psi_log::Level::DEBUG);
 
-	auto task_manager = psi_thread::start_default_task_manager();
+	psi_thread::TaskManager task_manager;
 
 	psi_serv::ServiceManager services;
 	services.set_resource_service(psi_serv::start_resource_loader(psi_serv::ResourceLoaderArgs{
-		task_manager.get(),
+		task_manager,
 	}));
 
 	services.set_window_service(psi_serv::start_gl_window_service(psi_serv::GLWindowServiceArgs{
@@ -59,16 +53,17 @@ int main(int argc, char** argv) {
 		true,
 	}));
 
-	// TODO these
+	// TODO get some more sensible resource storage
+	// and project structure
 	services.resource_service().register_loader(std::hash<std::string>()(u8"mesh"), [](std::string const& s)->auto{ return psi_util::load_mesh(s); });
 	services.resource_service().register_loader(std::hash<std::string>()(u8"material"), [](std::string const& s)->auto{ return psi_util::load_text(s); });
 	services.resource_service().register_loader(std::hash<std::string>()(u8"shader"), [](std::string const& s)->auto{ return psi_util::load_glsl(s); });
 
-	psi_sys::SystemManager systems(task_manager.get());
+	psi_sys::SystemManager systems(task_manager);
 	systems.register_component_type(psi_scene::component_type_entity_info);
 	systems.register_component_type(psi_scene::component_type_model_info);
 	systems.register_component_type(psi_scene::component_type_transform_info);
-	systems.register_system(psi_sys::start_gl_renderer(*task_manager, services));
+	systems.register_system(psi_sys::start_gl_renderer(task_manager, services));
 	systems.load_scene(nullptr);
 
 	// TODO cap FPS

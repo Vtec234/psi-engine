@@ -20,14 +20,14 @@
 
 #pragma once
 
-#include "../../thread/task.hpp"
-#include "../resource.hpp"
+#include "../../thread/manager.hpp"
+#include "../../service/resource.hpp"
 
 
 namespace psi_serv {
 /// Arguments required to start the ResourceLoader service.
 struct ResourceLoaderArgs {
-	psi_thread::ITaskSubmitter* task_submitter;
+	psi_thread::TaskManager const& task_submitter;
 };
 
 std::unique_ptr<IResourceService> start_resource_loader(ResourceLoaderArgs);

@@ -124,7 +124,7 @@ private:
 
 class ResourceLoader : public psi_serv::IResourceService {
 public:
-	explicit ResourceLoader(psi_thread::ITaskSubmitter* tasks)
+	explicit ResourceLoader(psi_thread::TaskManager const& tasks)
 		: m_task_submitter(tasks) {}
 
 	void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) override {
@@ -150,7 +150,7 @@ public:
 		}
 
 		// load resource from disk
-		m_task_submitter->submit_task(
+		m_task_submitter.submit_task(
 			[&, h] {
 				// insert element (ResourceStorage() auto sets state as Loading)
 				accessor access;
@@ -212,7 +212,7 @@ private:
 	std::unordered_map<ResourceType, std::function<boost::any(std::string const&)>> m_loaders;
 
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
-	psi_thread::ITaskSubmitter const* m_task_submitter;
+	psi_thread::TaskManager const& m_task_submitter;
 };
 
 std::unique_ptr<psi_serv::IResourceService> psi_serv::start_resource_loader(ResourceLoaderArgs args) {

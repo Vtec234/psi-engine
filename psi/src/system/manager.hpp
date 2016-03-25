@@ -24,16 +24,16 @@
 #include <unordered_map>
 #include <cstdint>
 
-#include "../thread/task.hpp"
 #include "system.hpp"
-
+#include "../thread/manager.hpp"
 #include "../scene/components.hpp"
+#include "../marker/thread_safety.hpp"
 
 
 namespace psi_sys {
-class SystemManager {
+class SystemManager : psi_mark::NonThreadsafe {
 public:
-	explicit SystemManager(psi_thread::ITaskSubmitter*);
+	explicit SystemManager(psi_thread::TaskManager const&);
 
 	void register_system(std::unique_ptr<ISystem>);
 
@@ -63,6 +63,6 @@ private:
 	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
 	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
 
-	psi_thread::ITaskSubmitter* m_tasks;
+	psi_thread::TaskManager const& m_tasks;
 };
 } // namespace psi_sys

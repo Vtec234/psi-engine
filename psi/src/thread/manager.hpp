@@ -28,16 +28,16 @@
 
 namespace psi_thread {
 /// An interface which  accepts tasks and manages them. They might potentially run in parallel.
-class ITaskSubmitter : psi_mark::ConstThreadsafe {
+class TaskManager : psi_mark::ConstThreadsafe {
 public:
 	/// Starts a task which will potentially be run asynchronously.
 	/// @return the task ID
-	virtual uint64_t submit_task(std::function<void()>) const = 0;
+	uint64_t submit_task(std::function<void()>) const;
 	/// Blocks until subtask is done and returns status.
 	/// @return true if task was done, false if ID is invalid; superego is ignored
-	virtual bool wait_for_task(uint64_t) const = 0;
+	bool wait_for_task(uint64_t) const;
 	/// Checks the status of the given task.
 	/// @return true if the task is currently running, false if it is done or the ID is invalid
-	virtual bool is_task_running(uint64_t) const = 0;
+	bool is_task_running(uint64_t) const;
 };
 } // namespace psi_thread

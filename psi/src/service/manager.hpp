@@ -25,6 +25,8 @@
 #include "resource.hpp"
 #include "window.hpp"
 
+#include "../marker/thread_safety.hpp"
+
 
 namespace psi_serv {
 /// A manager for objects implements I..Service interfaces.
@@ -32,7 +34,7 @@ namespace psi_serv {
 /// A requirement for I..Service implementations is that each const function be safe
 /// with respect to other const functions, as well as non-const ones.
 /// Non-const functions can only be called by a single thread.
-class ServiceManager {
+class ServiceManager : psi_mark::ConstThreadsafe {
 public:
 	ServiceManager();
 

@@ -20,30 +20,10 @@
 
 #pragma once
 
-#include <cstdint>
-#include <memory>
-
-#include "../window.hpp"
-
-
-namespace psi_serv {
-/// The arguments required to start an OpenGL window instance.
-struct GLWindowServiceArgs {
-	uint16_t width;
-	uint16_t height;
-
-	uint8_t samples;
-
-	char const* title;
-
-	bool resizable;
-	bool always_on_top;
-
-	bool debug;
-};
-
-/// Starts the service and spawns a window.
-/// Might throw an exception or two.
-/// Shouldn't probably be called more than once - might bork.
-std::unique_ptr<IWindowService> start_gl_window_service(GLWindowServiceArgs);
-} // namespace psi_serv
+#include "resource/data.hpp"
+#include "resource/file.hpp"
+#include "resource/glsl_source.hpp"
+#include "scene/default_components.hpp"
+#include "service/resource.hpp"
+#include "service/window_gl.hpp"
+#include "system/renderer_gl.hpp"

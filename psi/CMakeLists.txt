@@ -4,26 +4,26 @@ project(Psi\ Engine)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -Wextra -Wno-unused -g")
 
 set(SOURCE_FILES
+	src/impl/resource/data.hpp
+	src/impl/resource/file.cpp src/impl/resource/file.hpp
+	src/impl/resource/glsl_source.cpp src/impl/resource/glsl_source.hpp
+	src/impl/scene/default_components.hpp
+	src/impl/service/resource.cpp src/impl/service/resource.hpp
+	src/impl/service/window_gl.cpp src/impl/service/window_gl.hpp
+	src/impl/system/renderer_gl.cpp src/impl/system/renderer_gl.hpp
+	src/impl/impl.hpp
 	src/log/log.cpp src/log/log.hpp
 	src/marker/thread_safety.hpp
-	src/scene/impl/default_components.hpp
 	src/scene/access.hpp
 	src/scene/components.hpp
-	src/service/impl/resource.cpp src/service/impl/resource.hpp
-	src/service/impl/window_gl.cpp src/service/impl/window_gl.hpp
 	src/service/manager.cpp src/service/manager.hpp
 	src/service/resource.hpp
 	src/service/window.hpp
-	src/system/impl/renderer_gl.cpp src/system/impl/renderer_gl.hpp
 	src/system/manager.cpp src/system/manager.hpp
 	src/system/system.hpp
-	src/thread/impl/manager.cpp src/thread/impl/manager.hpp
-	src/thread/task.hpp
+	src/thread/manager.cpp src/thread/manager.hpp
 	src/util/assert.hpp
-	src/util/data.hpp
-	src/util/file.cpp src/util/file.hpp
 	src/util/gl.cpp src/util/gl.hpp
-	src/util/glsl_source.cpp src/util/glsl_source.hpp
 	src/util/stream.cpp src/util/stream.hpp
 )
 

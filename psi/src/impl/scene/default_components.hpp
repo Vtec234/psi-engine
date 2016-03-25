@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "../components.hpp"
+#include "../../scene/components.hpp"
 
 
 namespace psi_scene {

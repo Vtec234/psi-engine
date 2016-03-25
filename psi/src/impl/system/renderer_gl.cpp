@@ -27,12 +27,12 @@
 #include "../../util/gl.hpp"
 #include "../../scene/access.hpp"
 #include "../../scene/components.hpp"
-#include "../../scene/impl/default_components.hpp"
+#include "../scene/default_components.hpp"
 
 
 class SystemGLRenderer : public psi_sys::ISystem {
 public:
-	SystemGLRenderer(psi_thread::ITaskSubmitter const& tasks, psi_serv::ServiceManager const& serv)
+	SystemGLRenderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv)
 		: m_tasks(tasks)
 		, m_serv(serv) {}
 
@@ -131,10 +131,10 @@ public:
 	void on_scene_shutdown(psi_scene::ISceneDirectAccess&) override {}
 
 private:
-	psi_thread::ITaskSubmitter const& m_tasks;
+	psi_thread::TaskManager const& m_tasks;
 	psi_serv::ServiceManager const& m_serv;
 };
 
-std::unique_ptr<psi_sys::ISystem> psi_sys::start_gl_renderer(psi_thread::ITaskSubmitter const& tasks, psi_serv::ServiceManager const& serv) {
+std::unique_ptr<psi_sys::ISystem> psi_sys::start_gl_renderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv) {
 	return std::make_unique<SystemGLRenderer>(tasks, serv);
 }

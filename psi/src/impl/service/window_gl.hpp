@@ -18,27 +18,32 @@
  *
  */
 
-#include "manager.hpp"
+#pragma once
+
+#include <cstdint>
+#include <memory>
+
+#include "../../service/window.hpp"
 
 
-class TaskManager : public psi_thread::ITaskSubmitter {
-public:
-	uint64_t submit_task(std::function<void()> f) const override {
-		// sshhh. nobody will ever know
-		// to outsiders we are concurrent af
-		f();
-		return 0;
-	}
+namespace psi_serv {
+/// The arguments required to start an OpenGL window instance.
+struct GLWindowServiceArgs {
+	uint16_t width;
+	uint16_t height;
 
-	bool wait_for_task(uint64_t) const override {
-		return false;
-	}
+	uint8_t samples;
 
-	bool is_task_running(uint64_t) const override {
-		return false;
-	}
+	char const* title;
+
+	bool resizable;
+	bool always_on_top;
+
+	bool debug;
 };
 
-std::unique_ptr<psi_thread::ITaskSubmitter> psi_thread::start_default_task_manager() {
-	return std::make_unique<TaskManager>();
-}
+/// Starts the service and spawns a window.
+/// Might throw an exception or two.
+/// Shouldn't probably be called more than once - might bork.
+std::unique_ptr<IWindowService> start_gl_window_service(GLWindowServiceArgs);
+} // namespace psi_serv
