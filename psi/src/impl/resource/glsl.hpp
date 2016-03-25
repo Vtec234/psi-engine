@@ -51,6 +51,10 @@ enum class UniformMapping {
 /// @throw if the string does not match any mapping
 UniformMapping uniform_mapping_from_name(std::string const&);
 
+/// Returns the string representation of the GLSL uniform type that a given UniformMapping has.
+/// @return the string or "" if invalid value is passed
+std::string uniform_mapping_glsl_type(UniformMapping map);
+
 /// A memory buffer that a uniform block in a shader may be attached to.
 /// The memory will be sent to the shader at runtime.
 enum UniformBlockMapping {
@@ -60,9 +64,9 @@ enum UniformBlockMapping {
 /// Matches a UniformBlockMapping to a given string.
 /// @throw if the string does not match any mapping
 UniformBlockMapping uniform_block_mapping_from_name(std::string const&);
-} // namespace gsg
+} // namespace psi_util
 
-// stupid std hash breaking my namespace apart
+// stupid hash thing has to be defined explicitly
 namespace std {
 template <>
 struct hash<psi_util::UniformMapping> {
@@ -83,10 +87,6 @@ namespace psi_util {
 /// A resource class representing the whole source (vertex, fragment, etc.) of a single GLSL shader.
 class GLSLSource {
 public:
-	/// Returns the string representation of the GLSL uniform type that a given UniformMapping has.
-	/// @return the string or "" if invalid value is passed
-	static std::string uniform_type(UniformMapping map);
-
 	/// An enum representing where each type of eGLSL source should be in the array passed to construct_from_sources.
 	enum class SourceTypeInArray : size_t {
 		VERTEX,
@@ -107,9 +107,7 @@ public:
 	///		[5] - compute
 	/// @throw if anything is wrong with the sources
 	/// @return a parsed version of the source in a GLSLSource instance
-	static GLSLSource construct_from_sources(std::array<std::vector<std::string>, 6> const& sources);
-
-	~GLSLSource() = default;
+	static GLSLSource parse_glsl_sources(std::array<std::vector<std::string>, 6> const& sources);
 
 	std::string const& vertex_shader() const;
 	std::string const& fragment_shader() const;

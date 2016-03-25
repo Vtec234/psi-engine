@@ -116,12 +116,3 @@ psi_util::MeshData psi_util::load_mesh(boost::filesystem::path const& file) {
 
 	return mesh;
 }
-
-// TODO this and store a single shader in one file instead of .vert, .frag, etc
-psi_util::GLSLSource psi_util::load_glsl(boost::filesystem::path const& file) {
-	std::array<std::vector<std::string>, 6> sources;
-	sources[0] = load_text(file.string() + ".vert");
-	sources[1] = load_text(file.string() + ".frag");
-
-	return GLSLSource::construct_from_sources(sources);
-}

@@ -55,9 +55,21 @@ int main(int argc, char** argv) {
 
 	// TODO get some more sensible resource storage
 	// and project structure
-	services.resource_service().register_loader(std::hash<std::string>()(u8"mesh"), [](std::string const& s)->auto{ return psi_util::load_mesh(s); });
-	services.resource_service().register_loader(std::hash<std::string>()(u8"material"), [](std::string const& s)->auto{ return psi_util::load_text(s); });
-	services.resource_service().register_loader(std::hash<std::string>()(u8"shader"), [](std::string const& s)->auto{ return psi_util::load_glsl(s); });
+	services.resource_service().register_loader(std::hash<std::string>()(u8"mesh"),
+		[] (std::string const& s) -> auto {
+			return psi_util::load_mesh(s);
+		});
+	services.resource_service().register_loader(std::hash<std::string>()(u8"material"),
+		[] (std::string const& s) -> auto {
+			return psi_util::load_text(s);
+		});
+	services.resource_service().register_loader(std::hash<std::string>()(u8"shader"),
+		[] (std::string const& s) -> auto {
+			return psi_util::GLSLSource::parse_glsl_sources({{
+				psi_util::load_text(s+u8".vert"),
+				psi_util::load_text(s+u8".frag"),
+			}});
+		});
 
 	psi_sys::SystemManager systems(task_manager);
 	systems.register_component_type(psi_scene::component_type_entity_info);

@@ -22,7 +22,7 @@
 
 #include "resource/data.hpp"
 #include "resource/file.hpp"
-#include "resource/glsl_source.hpp"
+#include "resource/glsl.hpp"
 #include "scene/default_components.hpp"
 #include "service/resource.hpp"
 #include "service/window_gl.hpp"

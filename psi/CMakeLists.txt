@@ -6,7 +6,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -Wall -Wextra -Wno-unused -g"
 set(SOURCE_FILES
 	src/impl/resource/data.hpp
 	src/impl/resource/file.cpp src/impl/resource/file.hpp
-	src/impl/resource/glsl_source.cpp src/impl/resource/glsl_source.hpp
+	src/impl/resource/glsl.cpp src/impl/resource/glsl.hpp
 	src/impl/scene/default_components.hpp
 	src/impl/service/resource.cpp src/impl/service/resource.hpp
 	src/impl/service/window_gl.cpp src/impl/service/window_gl.hpp

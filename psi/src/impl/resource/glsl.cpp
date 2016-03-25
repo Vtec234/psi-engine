@@ -18,7 +18,7 @@
  *
  */
 
-#include "glsl_source.hpp"
+#include "glsl.hpp"
 
 #include <regex>
 
@@ -46,17 +46,8 @@ psi_util::UniformMapping psi_util::uniform_mapping_from_name(std::string const& 
 	throw std::runtime_error("Tried to resolve invalid uniform mapping " + name + ".");
 }
 
-// -- UniformBlockMapping --
-psi_util::UniformBlockMapping psi_util::uniform_block_mapping_from_name(std::string const& name) {
-	#define UBMAP(s) if (name == #s) return UniformBlockMapping::s;
-	UBMAP(LIGHT_DATA)
-
-	throw std::runtime_error("Tried to resolve invalid uniform block mapping " + name + ".");
-}
-
-// -- GLSLSource --
-std::string psi_util::GLSLSource::uniform_type(UniformMapping map) {
-	switch(map) {
+std::string psi_util::uniform_mapping_glsl_type(UniformMapping map) {
+	switch (map) {
 	case UniformMapping::LOCAL_TO_CLIP:
 	case UniformMapping::LOCAL_TO_WORLD:
 	case UniformMapping::WORLD_TO_CLIP:
@@ -89,7 +80,16 @@ std::string psi_util::GLSLSource::uniform_type(UniformMapping map) {
 	}
 }
 
-psi_util::GLSLSource psi_util::GLSLSource::construct_from_sources(std::array<std::vector<std::string>, 6> const& sources) {
+// -- UniformBlockMapping --
+psi_util::UniformBlockMapping psi_util::uniform_block_mapping_from_name(std::string const& name) {
+	#define UBMAP(s) if (name == #s) return UniformBlockMapping::s;
+	UBMAP(LIGHT_DATA)
+
+	throw std::runtime_error("Tried to resolve invalid uniform block mapping " + name + ".");
+}
+
+// -- GLSLSource --
+psi_util::GLSLSource psi_util::GLSLSource::parse_glsl_sources(std::array<std::vector<std::string>, 6> const& sources) {
 	GLSLSource obj;
 
 	// idea was to require #type, but now it seems to rigid
@@ -151,8 +151,8 @@ psi_util::GLSLSource psi_util::GLSLSource::construct_from_sources(std::array<std
 						}
 
 						// check if uniform type matches resource type
-						if (uniform_type(map) != unif_type_str)
-							throw std::runtime_error("line " + std::to_string(i_line + 2) + ":\nUniform type " + unif_type_str + " does not match mapped resource type " + uniform_type(map) + ".");
+						if (uniform_mapping_glsl_type(map) != unif_type_str)
+							throw std::runtime_error("line " + std::to_string(i_line + 2) + ":\nUniform type " + unif_type_str + " does not match mapped resource type " + uniform_mapping_glsl_type(map) + ".");
 
 						// just insert. one mapping can map to many uniforms
 						obj.m_unifs.insert(std::make_pair(map, unif_name_str));

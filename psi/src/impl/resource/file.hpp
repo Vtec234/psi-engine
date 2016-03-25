@@ -26,7 +26,6 @@
 #include <boost/filesystem.hpp>
 
 #include "data.hpp"
-#include "glsl_source.hpp"
 
 
 namespace psi_util {
@@ -44,9 +43,4 @@ namespace psi_util {
 	/// @throws if the file does not exist, is invalid, or otherwise occupied
 	/// @returns the mesh data
 	psi_util::MeshData load_mesh(boost::filesystem::path const& file);
-
-	/// Tries to load a GLSL source stored in plaintext format.
-	/// @throws if the file does not exist, is invalid, or otherwise occupied
-	/// @returns the GLSL source
-	psi_util::GLSLSource load_glsl(boost::filesystem::path const& file);
 } // namespace psi_util
