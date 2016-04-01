@@ -25,8 +25,10 @@
 #include <cfloat>
 #include <vector>
 
+#include <boost/filesystem.hpp>
 
-namespace psi_util {
+
+namespace psi_rndr {
 /// Describes a single vertex in a mesh.
 struct VertexData {
 	static constexpr size_t FLOATS_PER_VERTEX = 11;
@@ -59,4 +61,9 @@ struct MeshData {
 	/// Bounding Box minimum position
 	std::array<float, 3> min_pos = {{FLT_MAX, FLT_MAX, FLT_MAX}};
 };
+
+/// Tries to load a mesh stored in the Psi Engine Mesh .msh format.
+/// @throws if the file does not exist, is invalid, or otherwise occupied
+/// @returns the mesh data
+MeshData load_mesh(boost::filesystem::path const& file);
 } // namespace psi_util

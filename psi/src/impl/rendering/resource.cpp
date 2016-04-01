@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Wojciech Nawrocki
+ * Copyright (C) 2016 Wojciech Nawrocki
  *
  * This file is part of Psi Engine.
  *
@@ -18,59 +18,14 @@
  *
  */
 
-#include "file.hpp"
+#include "resource.hpp"
 
-#include <fstream>
-
-namespace fs = boost::filesystem;
+#include "../../util/file.hpp"
 
 
-std::vector<std::string> psi_util::load_text(fs::path const& file) {
-	// try to open input stream
-	std::ifstream in_file(file.c_str());
-	if (!in_file.good()) {
-		in_file.close();
-		throw std::runtime_error("Failed to open text file " + file.string() + ".");
-	}
-
-	// read line by line
-	std::string line;
-	std::vector<std::string> contents;
-	while (in_file.good()) {
-		getline(in_file, line);
-		contents.push_back(line + "\n");
-	}
-
-	// close file and return contents
-	in_file.close();
-	return contents;
-}
-
-std::vector<char> psi_util::load_binary(fs::path const& file) {
+psi_rndr::MeshData psi_rndr::load_mesh(boost::filesystem::path const& file) {
 	// might throw, pass exception if it does
-	auto size = fs::file_size(file);
-
-	// allocate memory of file size
-	std::vector<char> bin(size);
-
-	// try to open binary input stream
-	std::ifstream in_file(file.c_str(), std::ios::in | std::ios::binary);
-	if (!in_file.good()) {
-		in_file.close();
-		throw std::runtime_error("Failed to open binary file " + file.string() + ".");
-	}
-
-	// copy whole file into vector
-	in_file.read(bin.data(), size);
-
-	// close file and return contents
-	in_file.close();
-	return bin;
-}
-
-psi_util::MeshData psi_util::load_mesh(boost::filesystem::path const& file) {
-	// might throw, pass exception if it does
-	auto data = load_binary(file);
+	auto data = psi_util::load_binary(file);
 
 	MeshData mesh;
 
@@ -101,8 +56,8 @@ psi_util::MeshData psi_util::load_mesh(boost::filesystem::path const& file) {
 	}
 	ptr += sizeof(char);
 	mesh.vertices.resize(verts);
-	memcpy(mesh.vertices.data(), ptr, verts * sizeof(psi_util::VertexData));
-	ptr += verts * sizeof(psi_util::VertexData);
+	memcpy(mesh.vertices.data(), ptr, verts * sizeof(VertexData));
+	ptr += verts * sizeof(VertexData);
 	if (*ptr != '\0') {
 		throw std::runtime_error("Invalid data in mesh file " + file.string() + ".");
 	}

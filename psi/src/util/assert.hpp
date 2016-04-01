@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Wojciech Nawrocki
+ * Copyright (C) 2016 Wojciech Nawrocki
  *
  * This file is part of Psi Engine.
  *

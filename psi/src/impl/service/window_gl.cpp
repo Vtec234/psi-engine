@@ -23,7 +23,7 @@
 #include <iostream>
 #include <atomic>
 
-#include "../../util/gl.hpp"
+#include "../rendering/gl/gl.hpp"
 #include <GLFW/glfw3.h>
 
 #include "../../log/log.hpp"

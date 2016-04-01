@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Wojciech Nawrocki
+ * Copyright (C) 2016 Wojciech Nawrocki
  *
  * This file is part of Psi Engine.
  *
@@ -20,11 +20,17 @@
 
 #pragma once
 
-#include "rendering/gl/gl.hpp"
-#include "rendering/gl/helper.hpp"
-#include "rendering/camera.hpp"
-#include "rendering/resource.hpp"
-#include "scene/default_components.hpp"
-#include "service/resource.hpp"
-#include "service/window_gl.hpp"
-#include "system/renderer_gl.hpp"
+
+#define HASHABLE_ENUM_CLASS_IN_NAMESPACE(name, type, space) \
+enum class name : type; \
+} \
+namespace std { \
+template <> \
+struct hash<space::name> { \
+	size_t operator()(space::name const& e) const { \
+		return static_cast<size_t>(e); \
+	} \
+}; \
+} \
+namespace space { \
+enum class name : type

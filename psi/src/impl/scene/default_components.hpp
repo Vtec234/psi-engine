@@ -71,11 +71,9 @@ static ComponentTypeInfo component_type_transform_info = {
 
 /// A component representing the resources needed to render the entity.
 struct ComponentModel {
-	/// Constant size 128-byte arrays containing UTF-32 resource names.
-	// ICU's typedef int32_t UChar32 is incompatible with U"string" from C++1z, as it returns char32_t[], so char32_t is used
-	std::array<char32_t, 128> mesh_name;
-	std::array<char32_t, 128> mat_name;
-	std::array<char32_t, 128> shader_name;
+	/// UTF-8
+	std::array<char, 512> mesh_name;
+	std::array<char, 512> mat_name;
 };
 
 static ComponentTypeInfo component_type_model_info = {

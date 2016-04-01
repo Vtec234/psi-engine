@@ -28,13 +28,21 @@
 namespace psi_log {
 	/// The importance level of a log message.
 	enum class Level {
+		/// THE END OF EVERYTHING
 		EMERGENCY,
+		/// DOUBLE DOOM
 		ALERT,
+		/// DOOM
 		CRITICAL,
+		/// Message informing about an invalid situation which requires attention.
 		ERROR,
+		/// Message informing about a valid situation which requires attention.
 		WARNING,
+		/// Message informing about a non-standard action which does not require attention.
 		NOTICE,
+		/// Message informing about standard actions undertaken by the engine.
 		INFO,
+		/// Message meant only for debugging purposes, superflouous otherwise.
 		DEBUG,
 	};
 
