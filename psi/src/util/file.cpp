@@ -22,8 +22,12 @@
 
 #include <fstream>
 
+// libpng 1.4 dropped definitions of png_infopp_NULL and int_p_NULL. So add
 #define png_infopp_NULL (png_infopp)NULL
 #define int_p_NULL (int*)NULL
+// in your code before including GIL headers.
+// ~ wdscxsj @ Stack Overflow
+// https://stackoverflow.com/questions/2442335/libpng-boostgil-png-infopp-null-not-found
 #include <boost/gil/extension/io/png_dynamic_io.hpp>
 #include <boost/gil/extension/io/jpeg_dynamic_io.hpp>
 #include <boost/gil/extension/io/tiff_dynamic_io.hpp>
