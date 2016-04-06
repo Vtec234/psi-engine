@@ -30,6 +30,7 @@
 #include "../../scene/components.hpp"
 #include "../scene/default_components.hpp"
 #include "../rendering/camera.hpp"
+#include "../../log/log.hpp"
 
 
 class SystemGLRenderer : public psi_sys::ISystem {
@@ -39,47 +40,60 @@ public:
 		, m_serv(serv) {}
 
 	uint64_t required_components() const override {
-		// yay hardcoded values
 		return psi_scene::component_type_entity_info.id | psi_scene::component_type_model_info.id | psi_scene::component_type_transform_info.id;
 	}
 
-	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
+	void gl_state_setup() {
 		// enable face culling, counter-clockwise face is front
 		gl::Enable(gl::CULL_FACE);
 		gl::CullFace(gl::BACK);
 		gl::FrontFace(gl::CCW);
 
 		// ensure MSAA is enabled
+		// TODO does MSAA work with deferred?
 		gl::Enable(gl::MULTISAMPLE);
-
-		// convert linear shader output to sRGB in framebuffer
-		gl::Enable(gl::FRAMEBUFFER_SRGB);
 
 		// enable depth test
 		gl::Enable(gl::DEPTH_TEST);
-		gl::DepthMask(GLboolean(true));
+		gl::DepthMask(true);
 		gl::DepthFunc(gl::LEQUAL);
 		gl::DepthRange(0.0f, 1.0f);
 
-		// enable depth clamping [0;1]
-		//gl::Enable(gl::DEPTH_CLAMP);
-
-		// setup color buffer clear value
+		// setup color & depth buffer clear values
 		gl::ClearColor(1.0f, 0.5f, 0.5f, 1.0f);
-
-		// setup depth buffer clear value
 		gl::ClearDepth(1.0f);
 
-		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
-		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
-			auto ent = boost::any_cast<psi_scene::ComponentEntity const*>(acc.read_component(psi_scene::component_type_entity_info.id, i_ent));
-			if (ent->model != psi_scene::NO_COMPONENT) {
-				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
-				m_serv.resource_service().request_resource(std::hash<std::string>()(model->mesh_name.data()), std::hash<std::string>()(u8"mesh"), model->mesh_name.data());
-				m_serv.resource_service().request_resource(std::hash<std::string>()(model->mat_name.data()), std::hash<std::string>()(u8"material"), model->mat_name.data());
-			}
-		}
+		// setup MRT framebuffer and texture
+		gl::GenFramebuffers(1, &m_mrt_framebuffer);
+		gl::BindFramebuffer(gl::FRAMEBUFFER, m_mrt_framebuffer);
 
+		// position vectors
+		gl::GenTextures(1, &m_pos_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_pos_frame_tex);
+		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB16F, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGB, gl::FLOAT, 0);
+		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::POS_ATTACHMENT, gl::TEXTURE_2D, m_pos_frame_tex, 0);
+
+		// normal vectors
+		gl::GenTextures(1, &m_norm_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_norm_frame_tex);
+		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB16F, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGB, gl::FLOAT, 0);
+		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::NORM_ATTACHMENT, gl::TEXTURE_2D, m_norm_frame_tex, 0);
+
+		// albedo
+		gl::GenTextures(1, &m_albedo_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_albedo_frame_tex);
+		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
+		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::ALBEDO_ATTACHMENT, gl::TEXTURE_2D, m_albedo_frame_tex, 0);
+
+		// reflectiveness (coloured metalicness) in RGB, roughness in A
+		gl::GenTextures(1, &m_refl_rough_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_refl_rough_frame_tex);
+		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
+		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::RR_ATTACHMENT, gl::TEXTURE_2D, m_refl_rough_frame_tex, 0);
+
+		psi_log::debug() << gl::CheckFramebufferStatus(gl::FRAMEBUFFER) << " " << gl::FRAMEBUFFER_COMPLETE << "\n";
+
+		// initialize samplers at texture units
 		psi_gl::SamplerSettings set = {
 			gl::LINEAR,
 			gl::LINEAR_MIPMAP_LINEAR,
@@ -88,41 +102,69 @@ public:
 			16.0f
 		};
 
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::DIFFUSE);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::SPECULAR);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::NORMAL);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::CUBE);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::NORM_MAP);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::ALBEDO);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::REFL_ROUGH);
 
-		/* setup ambient light
-		GLScene3D* scene = static_cast<GLScene3D*>(m_scene.get());
-		scene->m_ambientLight.color = glm::vec3(0.0001f, 0.0001f, 0.0001f);
-		scene->m_directionalLight.color = glm::vec3(1.0f, 1.0f, 1.0f);
-		scene->m_directionalLight.dir_world = glm::vec3(0.0f, -1.0f, 0.0f);
-		m_shaderPool.requestElement("shaders/bounding",
-			[&] ()->ShaderSource* {
-				return m_shaderSourceProvider->requestResource("shaders/bounding");
-			}
-		);
+		// frame G-Buffer samplers should filter from nearest pixel instead of linearly from several
+		set.mag_filter = gl::NEAREST;
+		set.min_filter = gl::NEAREST;
 
-		m_shaderPool.requestElement("shaders/skybox",
-			[&] ()->ShaderSource* {
-				return m_shaderSourceProvider->requestResource("shaders/skybox");
-			}
-		);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::POS_FRAME);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::NORM_FRAME);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::ALBEDO_FRAME);
+		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::REFL_ROUGH_FRAME);
+	}
 
-		m_cubeTexPool.requestElement("textures/sky_debug",
-			[&] ()->gli::texture* {
-				return m_textureProvider->requestResource("textures/sky_debug");
+	void gl_state_cleanup() {
+		// TODO
+	}
+
+	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
+		gl_state_setup();
+
+		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
+		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
+			auto ent = boost::any_cast<psi_scene::ComponentEntity const*>(acc.read_component(psi_scene::component_type_entity_info.id, i_ent));
+			if (ent->model != psi_scene::NO_COMPONENT) {
+				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
+				std::hash<std::string> hash;
+				std::array<std::string, 3> textures = {{
+					model->albedo_tex.data(),
+					model->normal_tex.data(),
+					model->reflectiveness_roughness_tex.data()
+				}};
+
+				m_serv.resource_service().request_resource(hash(model->mesh_name.data()), hash(u8"mesh"), model->mesh_name.data());
+				for (auto const& tex : textures) {
+					m_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
+				}
+
+				// upload mesh to GL
+				auto msh = *m_serv.resource_service().retrieve_resource(hash(model->mesh_name.data()));
+				psi_gl::MeshBuffer buf(boost::any_cast<psi_rndr::MeshData>(msh->resource()));
+				m_uploaded_meshes.emplace(model->mesh_name.data(), buf);
+
+				// upload textures to GL
+				for (auto const& tex : textures) {
+					auto data = boost::any_cast<psi_rndr::TextureData>((*m_serv.resource_service().retrieve_resource(hash(tex)))->resource());
+					m_uploaded_textures[model->albedo_tex.data()] = psi_gl::upload_tex(data);
+				}
 			}
-		);
-		*/
+		}
+
 	}
 
 	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
+		// TODO handle changes in scene
+
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
 		m_cam.adjustAspectRatio(m_serv.window_service().aspect_ratio());
 
+		// specify all framebuffer attachments to be rendered to
+		GLuint attachments[4] = { psi_gl::POS_ATTACHMENT, psi_gl::NORM_ATTACHMENT, psi_gl::ALBEDO_ATTACHMENT, psi_gl::RR_ATTACHMENT, };
+		gl::DrawBuffers(4, attachments);
 
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
@@ -131,24 +173,10 @@ public:
 				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
 				auto trans = boost::any_cast<psi_scene::ComponentTransform const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->transform));
 
-				// bind deferred 4-FBO shader
-
-				//auto const& mat = m_registered_materials[model->mat_name.data()];
-				//mat.diffuse.bind_to_tex_unit(psi_gl::TextureUnit::DIFFUSE);
-				////mat.specular.bind_to_tex_unit(psi_gl::TextureUnit::SPECULAR);
-				//mat.normal.bind_to_tex_unit(psi_gl::TextureUnit::NORMAL);
-				//mat.gloss.bind_to_tex_unit(psi_gl::TextureUnit::GLOSS);
-
-				// submit uniforms..
-
-				//m_registered_meshes[model->mesh_name.data()].draw(gl::TRIANGLES);
-
+				gl::UseProgram(m_compiled_shaders[u8"deferred_gbuffer"]);
 
 			}
 		}
-
-		// do lighting n' shit
-		// how to deal with per-model lighting shaders n' shit?
 	}
 
 	void on_scene_save(psi_scene::ISceneDirectAccess&, void* replace_with_save_file) override {}
@@ -161,9 +189,15 @@ private:
 
 	psi_rndr::Camera m_cam;
 
-	//std::unordered_map<std::string, psi_gl::Shader> m_registered_shaders;
-	//std::unordered_map<std::string, psi_gl::MeshBuffer> m_registered_meshes;
-	//std::unordered_map<std::string, psi_gl::Material> m_registered_materials;
+	std::unordered_map<std::string, GLuint> m_uploaded_textures;
+	std::unordered_map<std::string, psi_gl::MeshBuffer> m_uploaded_meshes;
+	std::unordered_map<std::string, GLuint> m_compiled_shaders;
+
+	GLuint m_mrt_framebuffer;
+	GLuint m_pos_frame_tex;
+	GLuint m_norm_frame_tex;
+	GLuint m_albedo_frame_tex;
+	GLuint m_refl_rough_frame_tex;
 };
 
 std::unique_ptr<psi_sys::ISystem> psi_sys::start_gl_renderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv) {

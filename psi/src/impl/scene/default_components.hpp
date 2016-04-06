@@ -73,7 +73,9 @@ static ComponentTypeInfo component_type_transform_info = {
 struct ComponentModel {
 	/// UTF-8
 	std::array<char, 512> mesh_name;
-	std::array<char, 512> mat_name;
+	std::array<char, 512> albedo_tex;
+	std::array<char, 512> reflectiveness_roughness_tex;
+	std::array<char, 512> normal_tex;
 };
 
 static ComponentTypeInfo component_type_model_info = {

@@ -475,24 +475,3 @@ GLuint psi_gl::Shader::uniform_block_buffer(UniformBlockMapping block) {
 void psi_gl::Shader::bind() {
 	gl::UseProgram(m_handle);
 }
-
-// -- Texture2D --
-psi_gl::Texture2D::Texture2D(std::vector<char> const& data) {
-	gl::GenTextures(1, &m_handle);
-
-	gl::BindTexture(gl::TEXTURE_2D, m_handle);
-
-	// mipmap levels in data
-	//for (size_t i_lvl = 0; i_lvl < data.levels(); ++i_lvl) {
-
-	//}
-}
-
-psi_gl::Texture2D::~Texture2D() {
-	gl::DeleteTextures(1, &m_handle);
-}
-
-void psi_gl::Texture2D::bind_to_tex_unit(TextureUnit unit) const {
-	gl::ActiveTexture(gl::TEXTURE0 + static_cast<GLuint>(unit));
-	//gl::BindTexture(gl::TEXTURE_TYPE, m_handle);
-}

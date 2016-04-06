@@ -20,10 +20,14 @@
 
 #include "resource.hpp"
 
+#include <Magick++.h>
+
 #include "../../util/file.hpp"
+namespace fs = boost::filesystem;
+#include "../../log/log.hpp"
 
 
-psi_rndr::MeshData psi_rndr::load_mesh(boost::filesystem::path const& file) {
+psi_rndr::MeshData psi_rndr::load_mesh(fs::path const& file) {
 	// might throw, pass exception if it does
 	auto data = psi_util::load_binary(file);
 
@@ -70,4 +74,18 @@ psi_rndr::MeshData psi_rndr::load_mesh(boost::filesystem::path const& file) {
 	}
 
 	return mesh;
+}
+
+psi_rndr::TextureData psi_rndr::load_texture(fs::path const& file) {
+	Magick::Image img;
+	img.read(file.string());
+
+	TextureData tex;
+
+	tex.height = img.rows();
+	tex.width = img.columns();
+
+	psi_log::debug("resource.cpp") << tex.height << " " << tex.width << "\n";
+
+	return tex;
 }

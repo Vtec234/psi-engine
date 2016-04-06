@@ -42,14 +42,14 @@ struct VertexData {
 	std::array<float, 2> uv;
 };
 
-/// Designates how primitives in a mesh are constructed from its vertices.
-enum class MeshPrimitiveMode {
-	TRIANGLES,
-	LINES,
-};
-
 /// Describes a physical mesh.
 struct MeshData {
+	/// Designates how primitives in a mesh are constructed from its vertices.
+	enum class MeshPrimitiveMode {
+		TRIANGLES,
+		LINES,
+	};
+
 	/// Vertices making up the mesh
 	std::vector<VertexData> vertices;
 	/// Indices of vectors creating primitives
@@ -62,8 +62,34 @@ struct MeshData {
 	std::array<float, 3> min_pos = {{FLT_MAX, FLT_MAX, FLT_MAX}};
 };
 
+struct TextureData {
+	enum class Encoding {
+		RGB8,
+		RGBA8,
+		RGB16,
+		RGBA16,
+		RGB32,
+		RGBA32,
+		RGB16F,
+	};
+
+	/// Vector of mipmaps, each one containing data in the specified encoding.
+	/// First element should be largest mipmap.
+	std::vector<std::vector<char>> data;
+
+	uint32_t width;
+	uint32_t height;
+	Encoding encoding;
+};
+
 /// Tries to load a mesh stored in the Psi Engine Mesh .msh format.
 /// @throws if the file does not exist, is invalid, or otherwise occupied
 /// @returns the mesh data
 MeshData load_mesh(boost::filesystem::path const& file);
+
+/// Tries to load a texture stored in the .png, .jpeg, or .tiff format.
+/// Calculates mipmaps.
+/// @throws if the file does not exist, is invalid, or otherwise occupied
+/// @returns the mesh data
+TextureData load_texture(boost::filesystem::path const& file);
 } // namespace psi_util

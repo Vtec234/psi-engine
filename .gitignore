@@ -4,3 +4,4 @@ build/
 *.user
 *.log
 lldb-nvim.json
+CMakeLists.txt.user

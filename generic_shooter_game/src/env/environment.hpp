@@ -21,13 +21,12 @@
 #pragma once
 
 #include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
 
 
 namespace gsg {
 struct Environment {
-	fs::path working_dir;
-	fs::path resource_dir;
+	boost::filesystem::path working_dir;
+	boost::filesystem::path resource_dir;
 };
 
 /// Parses command line arguments.

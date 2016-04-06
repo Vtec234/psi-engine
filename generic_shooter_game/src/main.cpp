@@ -48,23 +48,24 @@ int main(int argc, char** argv) {
 		640,
 		480,
 		8,
-		"UltraWindow3600-K Ultimate Edition Beta v.0.0.1",
+		u8"UltraWindow3600-K Ultimate Edition Beta v.0.0.1",
 		true,
 		true,
 		true,
 	}));
 
-	// TODO get some more sensible resource storage
-	// and project structure
-	services.resource_service().register_loader(std::hash<std::string>()(u8"mesh"),
+	psi_rndr::load_texture("/home/wojciech/Programming/C++/UltraSuite2K/resources/textures/cone.dds");
+
+	std::hash<std::string> hash;
+	services.resource_service().register_loader(hash(u8"mesh"),
 		[] (std::string const& s) -> auto {
 			return psi_rndr::load_mesh(s);
 		});
-	services.resource_service().register_loader(std::hash<std::string>()(u8"material"),
+	services.resource_service().register_loader(hash(u8"texture"),
 		[] (std::string const& s) -> auto {
-			return psi_util::load_text(s);
+			return psi_util::load_image(s, psi_util::ImageFormat::PNG);
 		});
-	services.resource_service().register_loader(std::hash<std::string>()(u8"shader"),
+	services.resource_service().register_loader(hash(u8"shader"),
 		[] (std::string const& s) -> auto {
 			return psi_gl::parse_glsl_source({{
 				psi_util::load_text(s+u8".vert"),

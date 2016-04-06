@@ -31,6 +31,7 @@ set(SOURCE_FILES
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GL REQUIRED gl)
+include_directories(/usr/include/ImageMagick-6)
 
 add_library(psi STATIC ${SOURCE_FILES})
-target_link_libraries(psi boost_filesystem boost_system ${GL_LIBRARIES} glfw tbb png jpeg tiff)
+target_link_libraries(psi boost_filesystem boost_system ${GL_LIBRARIES} glfw tbb png jpeg tiff Magick++-6.Q16HDRI)

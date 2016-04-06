@@ -195,6 +195,7 @@ std::unique_ptr<psi_serv::IWindowService> psi_serv::start_gl_window_service(GLWi
 			static_cast<GLWindowService*>(glfwGetWindowUserPointer(win))->framebuffer_size_callback(width, height);
 		}
 	);
+	service->framebuffer_size_callback(args.width, args.height);
 
 	glfwSetKeyCallback(window,
 		[] (GLFWwindow* win, int key, int scancode, int action, int mods) {
@@ -207,6 +208,7 @@ std::unique_ptr<psi_serv::IWindowService> psi_serv::start_gl_window_service(GLWi
 			static_cast<GLWindowService*>(glfwGetWindowUserPointer(win))->mouse_pressed_callback(button, action, mods);
 		}
 	);
+
 
 	glfwSetCursorPosCallback(window,
 		[] (GLFWwindow* win, double x, double y) {

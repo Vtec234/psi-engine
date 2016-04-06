@@ -48,13 +48,13 @@ private:
 };
 
 enum class TextureUnit {
-	DIFFUSE = 1,
-	SPECULAR = 2,
-	NORMAL = 3,
-	CUBE = 4,
-	GUI = 5,
-	TEXT = 6,
-	GLOSS = 7,
+	POS_FRAME = 1,
+	NORM_FRAME = 2,
+	ALBEDO_FRAME = 3,
+	REFL_ROUGH_FRAME = 4,
+	NORM_MAP = 5,
+	ALBEDO = 6,
+	REFL_ROUGH = 7,
 };
 
 struct SamplerSettings {
@@ -135,6 +135,11 @@ enum class SourceTypeInArray : size_t {
 /// @return a parsed version of the source in a GLSLSource instance
 GLSLSource parse_glsl_source(std::array<std::vector<std::string>, 6> const& sources);
 
+constexpr GLenum POS_ATTACHMENT = gl::COLOR_ATTACHMENT0;
+constexpr GLenum NORM_ATTACHMENT = gl::COLOR_ATTACHMENT1;
+constexpr GLenum ALBEDO_ATTACHMENT = gl::COLOR_ATTACHMENT2;
+constexpr GLenum RR_ATTACHMENT = gl::COLOR_ATTACHMENT3;
+
 class Shader {
 public:
 	explicit Shader(GLSLSource const&);
@@ -155,27 +160,66 @@ private:
 	std::unordered_map<UniformBlockMapping, GLuint> m_unif_blocks;
 };
 
-// TODO how to load textures?
-// maybe material first from resource loader, defined by entity
-// and from material load textures with resource loader
-// then store all as psi_gl::Material
-class Texture2D {
-public:
-	explicit Texture2D(std::vector<char> const&);
-	~Texture2D();
+inline GLenum tex_internal_format(psi_rndr::TextureData::Encoding enc) {
+	switch (enc) {
+		case psi_rndr::TextureData::Encoding::RGB8:
+			return gl::RGB8;
 
-	void bind_to_tex_unit(TextureUnit) const;
+		case psi_rndr::TextureData::Encoding::RGBA8:
+			return gl::RGBA8;
 
-private:
-	GLuint m_handle;
-};
+		case psi_rndr::TextureData::Encoding::RGB16:
+			return gl::RGB16;
 
-// TODO PBR
-struct Material {
-	Texture2D diffuse;
-	Texture2D specular;
-	Texture2D normal;
-	Texture2D gloss;
-	float metalicness;
-};
+		case psi_rndr::TextureData::Encoding::RGBA16:
+			return gl::RGBA16;
+
+		case psi_rndr::TextureData::Encoding::RGB32:
+			return gl::RGB32I;
+
+		case psi_rndr::TextureData::Encoding::RGBA32:
+			return gl::RGBA32I;
+
+		case psi_rndr::TextureData::Encoding::RGB16F:
+			return gl::RGB16F;
+	}
+}
+
+inline GLenum tex_format(psi_rndr::TextureData::Encoding enc) {
+	switch (enc) {
+		case psi_rndr::TextureData::Encoding::RGB8:
+		case psi_rndr::TextureData::Encoding::RGB16:
+		case psi_rndr::TextureData::Encoding::RGB32:
+		case psi_rndr::TextureData::Encoding::RGB16F:
+			return gl::RGB;
+
+		case psi_rndr::TextureData::Encoding::RGBA8:
+		case psi_rndr::TextureData::Encoding::RGBA16:
+		case psi_rndr::TextureData::Encoding::RGBA32:
+			return gl::RGBA;
+	}
+}
+
+inline GLuint upload_tex(psi_rndr::TextureData const& tex) {
+	GLuint tex_handle;
+
+	gl::GenTextures(1, &tex_handle);
+	gl::BindTexture(gl::TEXTURE_2D, tex_handle);
+
+	for (size_t i_lvl = 0; i_lvl <	tex.data.size(); ++i_lvl) {
+		gl::TexImage2D(
+			gl::TEXTURE_2D,
+			i_lvl,
+			psi_gl::tex_internal_format(tex.encoding),
+			tex.width,
+			tex.height,
+			0,
+			psi_gl::tex_format(tex.encoding),
+			gl::BYTE,
+			tex.data.data()
+		);
+	}
+
+	return tex_handle;
+}
 } // namespace psi_gl
