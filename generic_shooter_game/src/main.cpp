@@ -66,10 +66,10 @@ int main(int argc, char** argv) {
 			return psi_util::load_image(s, psi_util::ImageFormat::PNG);
 		});
 	services.resource_service().register_loader(hash(u8"shader"),
-		[] (std::string const& s) -> auto {
+		[=] (std::string const& s) -> auto {
 			return psi_gl::parse_glsl_source({{
-				psi_util::load_text(s+u8".vert"),
-				psi_util::load_text(s+u8".frag"),
+				psi_util::load_text(env.resource_dir.string() + s + u8".vert"),
+				psi_util::load_text(env.resource_dir.string() + s + u8".frag"),
 			}});
 		});
 

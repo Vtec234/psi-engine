@@ -78,16 +78,15 @@ enum class ShaderVertexAttrib {
 /// A resource that a uniform in a shader may be attached to.
 /// The value of this resource will be sent to the shader at runtime.
 HASHABLE_ENUM_CLASS_IN_NAMESPACE(UniformMapping, uint32_t, psi_gl) {
-	LOCAL_TO_CLIP,
 	LOCAL_TO_WORLD,
+	WORLD_TO_CAMERA,
+	LOCAL_TO_CLIP,
 	WORLD_TO_CLIP,
 	CAMERA_TO_CLIP,
-	WORLD_TO_CAMERA,
-	DIFFUSE_TEXTURE_SAMPLER,
-	SPECULAR_TEXTURE_SAMPLER,
+	ALBEDO_TEXTURE_SAMPLER,
 	NORMAL_TEXTURE_SAMPLER,
+	REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER,
 	CUBEMAP_TEXTURE_SAMPLER,
-	GAUSSIAN_SPECULAR_TERM,
 	CAMERA_POSITION_WORLD,
 	ACTIVE_POINT_LIGHTS,
 	ACTIVE_SPOT_LIGHTS,
@@ -101,6 +100,12 @@ HASHABLE_ENUM_CLASS_IN_NAMESPACE(UniformBlockMapping, uint32_t, psi_gl) {
 	LIGHT_DATA,
 };
 
+constexpr GLenum POS_ATTACHMENT = gl::COLOR_ATTACHMENT0;
+constexpr GLenum NORM_ATTACHMENT = gl::COLOR_ATTACHMENT1;
+constexpr GLenum ALBEDO_ATTACHMENT = gl::COLOR_ATTACHMENT2;
+constexpr GLenum RR_ATTACHMENT = gl::COLOR_ATTACHMENT3;
+
+// -- SHADERS --
 struct GLSLSource {
 	std::string vertex;
 	std::string fragment;
@@ -135,31 +140,15 @@ enum class SourceTypeInArray : size_t {
 /// @return a parsed version of the source in a GLSLSource instance
 GLSLSource parse_glsl_source(std::array<std::vector<std::string>, 6> const& sources);
 
-constexpr GLenum POS_ATTACHMENT = gl::COLOR_ATTACHMENT0;
-constexpr GLenum NORM_ATTACHMENT = gl::COLOR_ATTACHMENT1;
-constexpr GLenum ALBEDO_ATTACHMENT = gl::COLOR_ATTACHMENT2;
-constexpr GLenum RR_ATTACHMENT = gl::COLOR_ATTACHMENT3;
-
-class Shader {
-public:
-	explicit Shader(GLSLSource const&);
-	~Shader();
-
-	GLuint uniform_handle(UniformMapping);
-	GLuint uniform_block_buffer(UniformBlockMapping);
-
-	/// this has to be called every frame on NVIDIA cards
-	/// because NVIDIA forces the shader to recompile
-	/// which messes it up
-	/// goddamnit NVIDIA
-	void bind();
-
-private:
-	GLuint m_handle;
-	std::unordered_map<UniformMapping, GLuint> m_unifs;
-	std::unordered_map<UniformBlockMapping, GLuint> m_unif_blocks;
+struct Shader {
+	GLuint handle;
+	std::unordered_map<UniformMapping, GLuint> unifs;
+	std::unordered_map<UniformBlockMapping, GLuint> unif_blocks;
 };
 
+Shader compile_glsl_source(GLSLSource const&);
+
+// -- TEXTURES --
 inline GLenum tex_internal_format(psi_rndr::TextureData::Encoding enc) {
 	switch (enc) {
 		case psi_rndr::TextureData::Encoding::RGB8:
@@ -214,7 +203,7 @@ inline GLuint upload_tex(psi_rndr::TextureData const& tex) {
 			tex.width,
 			tex.height,
 			0,
-			psi_gl::tex_format(tex.encoding),
+			tex_format(tex.encoding),
 			gl::BYTE,
 			tex.data.data()
 		);

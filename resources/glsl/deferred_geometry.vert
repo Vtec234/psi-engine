@@ -25,9 +25,9 @@ layout(location = 1) in vec3 norm_model_vec3;
 layout(location = 2) in vec3 tan_model_vec3;
 layout(location = 3) in vec2 uv_tan_vec2;
 
-//#map LOCAL_TO_WORLD;
+#map LOCAL_TO_WORLD
 uniform mat4 model_to_world_mat4;
-//#map LOCAL_TO_CLIP;
+#map LOCAL_TO_CLIP
 uniform mat4 model_to_clip_mat4;
 
 smooth out vec3 pos_world_vec3;

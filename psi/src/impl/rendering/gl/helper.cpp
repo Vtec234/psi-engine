@@ -121,16 +121,15 @@ void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, ps
 inline static psi_gl::UniformMapping uniform_mapping_from_name(std::string const& name) {
 	// TODO do dis wit templates?
 	#define UMAP(s) if(name == #s) return psi_gl::UniformMapping::s;
-	UMAP(LOCAL_TO_CLIP)
 	UMAP(LOCAL_TO_WORLD)
+	UMAP(WORLD_TO_CAMERA)
+	UMAP(LOCAL_TO_CLIP)
 	UMAP(WORLD_TO_CLIP)
 	UMAP(CAMERA_TO_CLIP)
-	UMAP(WORLD_TO_CAMERA)
-	UMAP(DIFFUSE_TEXTURE_SAMPLER)
-	UMAP(SPECULAR_TEXTURE_SAMPLER)
+	UMAP(ALBEDO_TEXTURE_SAMPLER)
 	UMAP(NORMAL_TEXTURE_SAMPLER)
+	UMAP(REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER)
 	UMAP(CUBEMAP_TEXTURE_SAMPLER)
-	UMAP(GAUSSIAN_SPECULAR_TERM)
 	UMAP(CAMERA_POSITION_WORLD)
 	UMAP(ACTIVE_POINT_LIGHTS)
 	UMAP(ACTIVE_SPOT_LIGHTS)
@@ -144,23 +143,20 @@ inline static psi_gl::UniformMapping uniform_mapping_from_name(std::string const
 /// @return the string or "" if invalid value is passed
 inline static std::string uniform_mapping_glsl_type(psi_gl::UniformMapping map) {
 	switch (map) {
-	case psi_gl::UniformMapping::LOCAL_TO_CLIP:
 	case psi_gl::UniformMapping::LOCAL_TO_WORLD:
-	case psi_gl::UniformMapping::WORLD_TO_CLIP:
 	case psi_gl::UniformMapping::WORLD_TO_CAMERA:
+	case psi_gl::UniformMapping::LOCAL_TO_CLIP:
+	case psi_gl::UniformMapping::WORLD_TO_CLIP:
 	case psi_gl::UniformMapping::CAMERA_TO_CLIP:
 		return "mat4";
 
-	case psi_gl::UniformMapping::DIFFUSE_TEXTURE_SAMPLER:
-	case psi_gl::UniformMapping::SPECULAR_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER:
 	case psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER:
 		return "sampler2D";
 
 	case psi_gl::UniformMapping::CUBEMAP_TEXTURE_SAMPLER:
 		return "samplerCube";
-
-	case psi_gl::UniformMapping::GAUSSIAN_SPECULAR_TERM:
-		return "float";
 
 	case psi_gl::UniformMapping::MESH_MIN_POS:
 	case psi_gl::UniformMapping::MESH_MAX_POS:
@@ -186,13 +182,10 @@ inline static psi_gl::UniformBlockMapping uniform_block_mapping_from_name(std::s
 	throw std::runtime_error("Tried to resolve invalid uniform block mapping " + name + ".");
 }
 
-// -- GLSLSource --
+// -- SHADERS --
 psi_gl::GLSLSource psi_gl::parse_glsl_source(std::array<std::vector<std::string>, 6> const& sources) {
 	GLSLSource obj;
 
-	// idea was to require #type, but now it seems to rigid
-	// ie one file can't be used as two types of shader
-	//std::regex const type_rgx("\\s*#type\\s*((frag)|(vert)|(geom)|(tess_ctrl)|(tess_eval)|(comp))(?=\\s*\\n)");
 	std::regex const map_rgx("\\s*#map\\s+\\w+(?=\\s*\\n)");
 	std::regex const unif_rgx("uniform\\s+\\w+\\s+\\w+(?=\\s*;)");
 	std::regex const block_rgx("uniform\\s+\\w+(?=\\s*(\\{|\\n))");
@@ -258,6 +251,9 @@ psi_gl::GLSLSource psi_gl::parse_glsl_source(std::array<std::vector<std::string>
 					// line below is a uniform block
 					else if (regex_search(line_below, result, block_rgx)) {
 						auto result_str = result.str();
+
+						// remember that this line contains a custom preprocessor directive
+						preproc_lines.push_back(i_line);
 
 						// remove whitespace
 						result_str.erase(remove_if(result_str.begin(), result_str.end(), isspace), result_str.end());
@@ -325,8 +321,7 @@ psi_gl::GLSLSource psi_gl::parse_glsl_source(std::array<std::vector<std::string>
 	return obj;
 }
 
-// -- Shader --
-inline static GLuint compile_shader_source(std::string const& source, GLenum type) {
+inline static GLuint _compile_shader_source(std::string const& source, GLenum type) {
 	// create a shader
 	GLuint ID = gl::CreateShader(type);
 
@@ -367,7 +362,7 @@ inline static GLuint compile_shader_source(std::string const& source, GLenum typ
 	return ID;
 }
 
-inline static void check_validation_link_error(GLuint handle, GLenum flag) {
+inline static void _check_validation_link_error(GLuint handle, GLenum flag) {
 	// make a variable to store status in, fill it with invalid value for when it can't be retrieved
 	GLint status = 2;
 	gl::GetProgramiv(handle, flag, &status);
@@ -398,40 +393,41 @@ inline static void check_validation_link_error(GLuint handle, GLenum flag) {
 	}
 }
 
-psi_gl::Shader::Shader(GLSLSource const& src) {
-	m_handle = gl::CreateProgram();
+psi_gl::Shader psi_gl::compile_glsl_source(GLSLSource const& src) {
+	Shader shader;
+	shader.handle = gl::CreateProgram();
 
 	std::vector<GLuint> shader_handles;
-	shader_handles.push_back(compile_shader_source(src.vertex, gl::VERTEX_SHADER));
-	shader_handles.push_back(compile_shader_source(src.fragment, gl::FRAGMENT_SHADER));
+	shader_handles.push_back(_compile_shader_source(src.vertex, gl::VERTEX_SHADER));
+	shader_handles.push_back(_compile_shader_source(src.fragment, gl::FRAGMENT_SHADER));
 	if (src.geometry)
-		shader_handles.push_back(compile_shader_source(*src.geometry, gl::GEOMETRY_SHADER));
+		shader_handles.push_back(_compile_shader_source(*src.geometry, gl::GEOMETRY_SHADER));
 	if (src.tess_ctrl)
-		shader_handles.push_back(compile_shader_source(*src.tess_ctrl, gl::TESS_CONTROL_SHADER));
+		shader_handles.push_back(_compile_shader_source(*src.tess_ctrl, gl::TESS_CONTROL_SHADER));
 	if (src.tess_eval)
-		shader_handles.push_back(compile_shader_source(*src.tess_eval, gl::TESS_EVALUATION_SHADER));
+		shader_handles.push_back(_compile_shader_source(*src.tess_eval, gl::TESS_EVALUATION_SHADER));
 	if (src.compute)
-		shader_handles.push_back(compile_shader_source(*src.compute, gl::COMPUTE_SHADER));
+		shader_handles.push_back(_compile_shader_source(*src.compute, gl::COMPUTE_SHADER));
 
 	for (auto h : shader_handles)
-		gl::AttachShader(m_handle, h);
+		gl::AttachShader(shader.handle, h);
 
-	gl::LinkProgram(m_handle);
-	check_validation_link_error(m_handle, gl::LINK_STATUS);
+	gl::LinkProgram(shader.handle);
+	_check_validation_link_error(shader.handle, gl::LINK_STATUS);
 
 	for (auto const& unif : src.unifs) {
-		GLint loc = gl::GetUniformLocation(m_handle, unif.second.c_str());
+		GLint loc = gl::GetUniformLocation(shader.handle, unif.second.c_str());
 
 		// -1 is magic value for invalid uniforms
 		if (loc == -1)
 			psi_log::warning("OpenGL Shader Compilation") << "Mapped uniform " + unif.second + " is not active in shader program.";
 		else
-			m_unifs.emplace(unif.first, loc);
+			shader.unifs.emplace(unif.first, loc);
 	}
 
 	GLuint bind_point = 0;
 	for (auto const& block : src.unif_blocks) {
-		GLuint loc  = gl::GetUniformBlockIndex(m_handle, block.second.c_str());
+		GLuint loc  = gl::GetUniformBlockIndex(shader.handle, block.second.c_str());
 
 		if (loc == gl::INVALID_INDEX)
 			psi_log::warning("OpenGL Shader Compilation") << "Mapped uniform block " + block.second + " is not active in shader program.";
@@ -439,39 +435,23 @@ psi_gl::Shader::Shader(GLSLSource const& src) {
 			GLuint buf;
 			gl::GenBuffers(1, &buf);
 
-			if (m_unif_blocks.size() != 0)
+			if (shader.unif_blocks.size() != 0)
 				++bind_point;
 
-			gl::UniformBlockBinding(m_handle, loc, bind_point);
+			gl::UniformBlockBinding(shader.handle, loc, bind_point);
 			gl::BindBufferBase(gl::UNIFORM_BUFFER, bind_point, buf);
 
-			m_unif_blocks.emplace(block.first, buf);
+			shader.unif_blocks.emplace(block.first, buf);
 		}
 	}
 
-	gl::ValidateProgram(m_handle);
-	check_validation_link_error(m_handle, gl::VALIDATE_STATUS);
+	gl::ValidateProgram(shader.handle);
+	_check_validation_link_error(shader.handle, gl::VALIDATE_STATUS);
 
 	for (auto h : shader_handles) {
-		gl::DetachShader(m_handle, h);
+		gl::DetachShader(shader.handle, h);
 		gl::DeleteShader(h);
 	}
-}
 
-psi_gl::Shader::~Shader() {
-	gl::DeleteProgram(m_handle);
-}
-
-GLuint psi_gl::Shader::uniform_handle(UniformMapping unif) {
-	ASSERT(m_unifs.count(unif));
-	return m_unifs[unif];
-}
-
-GLuint psi_gl::Shader::uniform_block_buffer(UniformBlockMapping block) {
-	ASSERT(m_unif_blocks.count(block));
-	return m_unif_blocks[block];
-}
-
-void psi_gl::Shader::bind() {
-	gl::UseProgram(m_handle);
+	return shader;
 }

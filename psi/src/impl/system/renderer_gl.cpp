@@ -91,8 +91,6 @@ public:
 		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
 		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::RR_ATTACHMENT, gl::TEXTURE_2D, m_refl_rough_frame_tex, 0);
 
-		psi_log::debug() << gl::CheckFramebufferStatus(gl::FRAMEBUFFER) << " " << gl::FRAMEBUFFER_COMPLETE << "\n";
-
 		// initialize samplers at texture units
 		psi_gl::SamplerSettings set = {
 			gl::LINEAR,
@@ -123,12 +121,16 @@ public:
 	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
 		gl_state_setup();
 
+		std::hash<std::string> hash;
+		m_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
+		auto src = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_geometry"));
+		m_compiled_shaders[u8"deferred_gbuffer"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(src->resource()));
+
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
 			auto ent = boost::any_cast<psi_scene::ComponentEntity const*>(acc.read_component(psi_scene::component_type_entity_info.id, i_ent));
 			if (ent->model != psi_scene::NO_COMPONENT) {
 				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
-				std::hash<std::string> hash;
 				std::array<std::string, 3> textures = {{
 					model->albedo_tex.data(),
 					model->normal_tex.data(),
@@ -158,13 +160,18 @@ public:
 	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
 		// TODO handle changes in scene
 
-		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-		m_cam.adjustAspectRatio(m_serv.window_service().aspect_ratio());
+		gl::BindFramebuffer(gl::FRAMEBUFFER, m_mrt_framebuffer);
 
 		// specify all framebuffer attachments to be rendered to
 		GLuint attachments[4] = { psi_gl::POS_ATTACHMENT, psi_gl::NORM_ATTACHMENT, psi_gl::ALBEDO_ATTACHMENT, psi_gl::RR_ATTACHMENT, };
 		gl::DrawBuffers(4, attachments);
+
+		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+		m_cam.adjustAspectRatio(m_serv.window_service().aspect_ratio());
+
+		auto const& sh = m_compiled_shaders[u8"deferred_gbuffer"];
+		gl::UseProgram(sh.handle);
 
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
@@ -173,8 +180,12 @@ public:
 				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
 				auto trans = boost::any_cast<psi_scene::ComponentTransform const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->transform));
 
-				gl::UseProgram(m_compiled_shaders[u8"deferred_gbuffer"]);
+				gl::UniformMatrix3fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, nullptr);
+				gl::UniformMatrix3fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, nullptr);
 
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::ALBEDO));
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_MAP));
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::REFL_ROUGH));
 			}
 		}
 	}
@@ -191,7 +202,7 @@ private:
 
 	std::unordered_map<std::string, GLuint> m_uploaded_textures;
 	std::unordered_map<std::string, psi_gl::MeshBuffer> m_uploaded_meshes;
-	std::unordered_map<std::string, GLuint> m_compiled_shaders;
+	std::unordered_map<std::string, psi_gl::Shader> m_compiled_shaders;
 
 	GLuint m_mrt_framebuffer;
 	GLuint m_pos_frame_tex;

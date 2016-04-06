@@ -24,13 +24,13 @@ smooth in vec3 pos_world_vec3;
 smooth in vec2 uv_tan_vec2_out;
 smooth in mat3 tan_to_world_mat3;
 
-//#map NORMAL_TEXTURE_SAMPLER
+#map NORMAL_TEXTURE_SAMPLER
 uniform sampler2D normal_sampler;
 
-//#map ALBEDO_TEXTURE_SAMPLER
+#map ALBEDO_TEXTURE_SAMPLER
 uniform sampler2D albedo_sampler;
 
-//#map REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER;
+#map REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER
 uniform sampler2D rr_sampler;
 
 layout(location = 0) out vec3 pos_world_vec3_out;
