@@ -21,11 +21,164 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "../marker/thread_safety.hpp"
 
 
 namespace psi_serv {
+/// A key present on a keyboard.
+/// Names taken from GLFW.
+enum class KeyboardInput {
+	SPACE,
+	APOSTROPHE,
+	COMMA,
+	MINUS,
+	PERIOD,
+	SLASH,
+
+	_0,
+	_1,
+	_2,
+	_3,
+	_4,
+	_5,
+	_6,
+	_7,
+	_8,
+	_9,
+
+	SEMICOLON,
+	EQUAL,
+
+	A,
+	B,
+	C,
+	D,
+	E,
+	F,
+	G,
+	H,
+	I,
+	J,
+	K,
+	L,
+	M,
+	N,
+	O,
+	P,
+	Q,
+	R,
+	S,
+	T,
+	U,
+	V,
+	W,
+	X,
+	Y,
+	Z,
+
+	LEFT_BRACKET,
+	BACKSLASH,
+	RIGHT_BRACKET,
+	GRAVE_ACCENT,
+
+	WORLD_1,
+	WORLD_2,
+
+	ESCAPE,
+	ENTER,
+	TAB,
+	BACKSPACE,
+	INSERT,
+	DELETE,
+
+	RIGHT,
+	LEFT,
+	DOWN,
+	UP,
+
+	PAGE_UP,
+	PAGE_DOWN,
+	HOME,
+	END,
+	CAPS_LOCK,
+	SCROLL_LOCK,
+	NUM_LOCK,
+	PRINT_SCREEN,
+	PAUSE,
+
+	F1,
+	F2,
+	F3,
+	F4,
+	F5,
+	F6,
+	F7,
+	F8,
+	F9,
+	F10,
+	F11,
+	F12,
+	F13,
+	F14,
+	F15,
+	F16,
+	F17,
+	F18,
+	F19,
+	F20,
+	F21,
+	F22,
+	F23,
+	F24,
+	F25,
+
+	KP_0,
+	KP_1,
+	KP_2,
+	KP_3,
+	KP_4,
+	KP_5,
+	KP_6,
+	KP_7,
+	KP_8,
+	KP_9,
+
+	KP_DECIMAL,
+	KP_DIVIDE,
+	KP_MULTIPLY,
+	KP_SUBTRACT,
+	KP_ADD,
+	KP_ENTER,
+	KP_EQUAL,
+
+	LEFT_SHIFT,
+	LEFT_CONTROL,
+	LEFT_ALT,
+	LEFT_SUPER,
+
+	RIGHT_SHIFT,
+	RIGHT_CONTROL,
+	RIGHT_ALT,
+	RIGHT_SUPER,
+
+	MENU,
+};
+
+/// What happened to a given input method.
+enum class InputAction {
+	PRESSED,
+	RELEASED,
+};
+
+/// One of the buttons present in a mouse.
+enum class MouseButton {
+	_1,
+	_2,
+	_3,
+};
+
 /// A service which manages a window and all the related events.
 class IWindowService : psi_mark::ConstThreadsafe {
 public:
@@ -42,158 +195,17 @@ public:
     virtual uint32_t height() const = 0;
     /// Returns width/height.
     virtual double aspect_ratio() const = 0;
-};
 
-/// A key present on a keyboard.
-/// Names taken from GLFW.
-// TODO is this legal?
-enum class KeyboardKey {
-    KEY_SPACE,
-    KEY_APOSTROPHE,
-    KEY_COMMA,
-    KEY_MINUS,
-    KEY_PERIOD,
-    KEY_SLASH,
+	virtual std::pair<double, double> mouse_pos() const = 0;
 
-    KEY_0,
-    KEY_1,
-    KEY_2,
-    KEY_3,
-    KEY_4,
-    KEY_5,
-    KEY_6,
-    KEY_7,
-    KEY_8,
-    KEY_9,
+	virtual std::vector<KeyboardInput> active_keyboard_inputs() const = 0;
 
-    KEY_SEMICOLON,
-    KEY_EQUAL,
+	virtual std::vector<MouseButton> active_mouse_buttons() const = 0;
 
-    KEY_A,
-    KEY_B,
-    KEY_C,
-    KEY_D,
-    KEY_E,
-    KEY_F,
-    KEY_G,
-    KEY_H,
-    KEY_I,
-    KEY_J,
-    KEY_K,
-    KEY_L,
-    KEY_M,
-    KEY_N,
-    KEY_O,
-    KEY_P,
-    KEY_Q,
-    KEY_R,
-    KEY_S,
-    KEY_T,
-    KEY_U,
-    KEY_V,
-    KEY_W,
-    KEY_X,
-    KEY_Y,
-    KEY_Z,
+	virtual void register_keyboard_input_callback(std::function<void(KeyboardInput, InputAction)>) const = 0;
 
-    KEY_LEFT_BRACKET,
-    KEY_BACKSLASH,
-    KEY_RIGHT_BRACKET,
-    KEY_GRAVE_ACCENT,
+	virtual void register_mouse_button_callback(std::function<void(MouseButton, InputAction)>) const = 0;
 
-    KEY_WORLD_1,
-    KEY_WORLD_2,
-
-    KEY_ESCAPE,
-    KEY_ENTER,
-    KEY_TAB,
-    KEY_BACKSPACE,
-    KEY_INSERT,
-    KEY_DELETE,
-
-    KEY_RIGHT,
-    KEY_LEFT,
-    KEY_DOWN,
-    KEY_UP,
-
-    KEY_PAGE_UP,
-    KEY_PAGE_DOWN,
-    KEY_HOME,
-    KEY_END,
-    KEY_CAPS_LOCK,
-    KEY_SCROLL_LOCK,
-    KEY_NUM_LOCK,
-    KEY_PRINT_SCREEN,
-    KEY_PAUSE,
-
-    KEY_F1,
-    KEY_F2,
-    KEY_F3,
-    KEY_F4,
-    KEY_F5,
-    KEY_F6,
-    KEY_F7,
-    KEY_F8,
-    KEY_F9,
-    KEY_F10,
-    KEY_F11,
-    KEY_F12,
-    KEY_F13,
-    KEY_F14,
-    KEY_F15,
-    KEY_F16,
-    KEY_F17,
-    KEY_F18,
-    KEY_F19,
-    KEY_F20,
-    KEY_F21,
-    KEY_F22,
-    KEY_F23,
-    KEY_F24,
-    KEY_F25,
-
-    KEY_KP_0,
-    KEY_KP_1,
-    KEY_KP_2,
-    KEY_KP_3,
-    KEY_KP_4,
-    KEY_KP_5,
-    KEY_KP_6,
-    KEY_KP_7,
-    KEY_KP_8,
-    KEY_KP_9,
-
-    KEY_KP_DECIMAL,
-    KEY_KP_DIVIDE,
-    KEY_KP_MULTIPLY,
-    KEY_KP_SUBTRACT,
-    KEY_KP_ADD,
-    KEY_KP_ENTER,
-    KEY_KP_EQUAL,
-
-    KEY_LEFT_SHIFT,
-    KEY_LEFT_CONTROL,
-    KEY_LEFT_ALT,
-    KEY_LEFT_SUPER,
-
-    KEY_RIGHT_SHIFT,
-    KEY_RIGHT_CONTROL,
-    KEY_RIGHT_ALT,
-    KEY_RIGHT_SUPER,
-
-    KEY_MENU
-};
-
-/// What happened to a given input method.
-enum class InputAction {
-	ACTION_PRESSED,
-	ACTION_RELEASED
-};
-
-/// One of the buttons present in a mouse.
-enum class MouseButton {
-	BUTTON_1,
-	BUTTON_2,
-	BUTTON_3
+	virtual void register_mouse_move_callback(std::function<void(double, double)>) const = 0;
 };
 } // namespace psi_serv

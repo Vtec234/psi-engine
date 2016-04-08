@@ -111,15 +111,17 @@ void psi_rndr::Camera::moveZ(float mult) {
 	m_worldToCameraIsDirty = true;
 }
 
-void psi_rndr::Camera::rotatePitch(float mult) {
+float psi_rndr::Camera::rotatePitch(float mult) {
 	m_camPitchDeg += mult;
 
 	m_camPitchDeg = glm::clamp(m_camPitchDeg, 1.0f, 179.0f);
 
 	m_worldToCameraIsDirty = true;
+
+	return m_camPitchDeg;
 }
 
-void psi_rndr::Camera::rotateYaw(float mult) {
+float psi_rndr::Camera::rotateYaw(float mult) {
 	m_camYawDeg += mult;
 
 	if (m_camYawDeg < 0.0f)
@@ -128,4 +130,6 @@ void psi_rndr::Camera::rotateYaw(float mult) {
 		m_camYawDeg = 0.0f;
 
 	m_worldToCameraIsDirty = true;
+
+	return m_camYawDeg;
 }

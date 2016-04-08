@@ -53,17 +53,16 @@ int main(int argc, char** argv) {
 		true,
 		true,
 	}));
-
-	psi_rndr::load_texture("/home/wojciech/Programming/C++/UltraSuite2K/resources/textures/cone.dds");
+	services.window_service().set_mouse_block(true);
 
 	std::hash<std::string> hash;
 	services.resource_service().register_loader(hash(u8"mesh"),
-		[] (std::string const& s) -> auto {
-			return psi_rndr::load_mesh(s);
+		[=] (std::string const& s) -> auto {
+			return psi_rndr::load_mesh(env.resource_dir.string() + s + u8".msh");
 		});
 	services.resource_service().register_loader(hash(u8"texture"),
-		[] (std::string const& s) -> auto {
-			return psi_util::load_image(s, psi_util::ImageFormat::PNG);
+		[=] (std::string const& s) -> auto {
+			return psi_rndr::load_texture(env.resource_dir.string() + s + u8".png");
 		});
 	services.resource_service().register_loader(hash(u8"shader"),
 		[=] (std::string const& s) -> auto {

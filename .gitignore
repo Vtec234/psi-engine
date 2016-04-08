@@ -5,3 +5,5 @@ build/
 *.log
 lldb-nvim.json
 CMakeLists.txt.user
+meshes/
+textures/

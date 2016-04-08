@@ -27,6 +27,7 @@
 #include "gl.hpp"
 #include "../resource.hpp"
 #include "../../../util/enum.hpp"
+#include "../../../util/assert.hpp"
 
 
 namespace psi_gl {
@@ -87,6 +88,10 @@ HASHABLE_ENUM_CLASS_IN_NAMESPACE(UniformMapping, uint32_t, psi_gl) {
 	NORMAL_TEXTURE_SAMPLER,
 	REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER,
 	CUBEMAP_TEXTURE_SAMPLER,
+	POSITION_FRAME_TEXTURE_SAMPLER,
+	NORMAL_FRAME_TEXTURE_SAMPLER,
+	ALBEDO_FRAME_TEXTURE_SAMPLER,
+	REFL_ROUGH_FRAME_TEXTURE_SAMPLER,
 	CAMERA_POSITION_WORLD,
 	ACTIVE_POINT_LIGHTS,
 	ACTIVE_SPOT_LIGHTS,
@@ -171,6 +176,9 @@ inline GLenum tex_internal_format(psi_rndr::TextureData::Encoding enc) {
 
 		case psi_rndr::TextureData::Encoding::RGB16F:
 			return gl::RGB16F;
+
+		default:
+			ASSERT(false);
 	}
 }
 
@@ -186,6 +194,9 @@ inline GLenum tex_format(psi_rndr::TextureData::Encoding enc) {
 		case psi_rndr::TextureData::Encoding::RGBA16:
 		case psi_rndr::TextureData::Encoding::RGBA32:
 			return gl::RGBA;
+
+		default:
+			ASSERT(false);
 	}
 }
 
@@ -195,18 +206,23 @@ inline GLuint upload_tex(psi_rndr::TextureData const& tex) {
 	gl::GenTextures(1, &tex_handle);
 	gl::BindTexture(gl::TEXTURE_2D, tex_handle);
 
+	auto width = tex.width;
+	auto height = tex.height;
 	for (size_t i_lvl = 0; i_lvl <	tex.data.size(); ++i_lvl) {
 		gl::TexImage2D(
 			gl::TEXTURE_2D,
 			i_lvl,
 			psi_gl::tex_internal_format(tex.encoding),
-			tex.width,
-			tex.height,
+			width,
+			height,
 			0,
 			tex_format(tex.encoding),
-			gl::BYTE,
-			tex.data.data()
+			gl::UNSIGNED_BYTE,
+			tex.data[i_lvl].data()
 		);
+
+		width /= 2;
+		height /= 2;
 	}
 
 	return tex_handle;

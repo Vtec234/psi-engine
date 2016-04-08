@@ -90,9 +90,9 @@ psi_gl::MeshBuffer::MeshBuffer(psi_rndr::MeshData const& mesh) {
 }
 
 psi_gl::MeshBuffer::~MeshBuffer() {
-	gl::DeleteBuffers(1, &m_VBO);
-	gl::DeleteBuffers(1, &m_EBO);
-	gl::DeleteVertexArrays(1, &m_VAO);
+	//gl::DeleteBuffers(1, &m_VBO);
+	//gl::DeleteBuffers(1, &m_EBO);
+	//gl::DeleteVertexArrays(1, &m_VAO);
 }
 
 void psi_gl::MeshBuffer::draw(GLenum primitives) {
@@ -130,6 +130,10 @@ inline static psi_gl::UniformMapping uniform_mapping_from_name(std::string const
 	UMAP(NORMAL_TEXTURE_SAMPLER)
 	UMAP(REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER)
 	UMAP(CUBEMAP_TEXTURE_SAMPLER)
+	UMAP(POSITION_FRAME_TEXTURE_SAMPLER)
+	UMAP(NORMAL_FRAME_TEXTURE_SAMPLER)
+	UMAP(ALBEDO_FRAME_TEXTURE_SAMPLER)
+	UMAP(REFL_ROUGH_FRAME_TEXTURE_SAMPLER)
 	UMAP(CAMERA_POSITION_WORLD)
 	UMAP(ACTIVE_POINT_LIGHTS)
 	UMAP(ACTIVE_SPOT_LIGHTS)
@@ -153,6 +157,10 @@ inline static std::string uniform_mapping_glsl_type(psi_gl::UniformMapping map) 
 	case psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER:
 	case psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER:
 	case psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::ALBEDO_FRAME_TEXTURE_SAMPLER:
+	case psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER:
 		return "sampler2D";
 
 	case psi_gl::UniformMapping::CUBEMAP_TEXTURE_SAMPLER:
@@ -185,6 +193,11 @@ inline static psi_gl::UniformBlockMapping uniform_block_mapping_from_name(std::s
 // -- SHADERS --
 psi_gl::GLSLSource psi_gl::parse_glsl_source(std::array<std::vector<std::string>, 6> const& sources) {
 	GLSLSource obj;
+	// TODO parse the directives better
+	// now .e.g #map WOLOLO; <- mind the semicolon
+	// will not raise an error and pass to GL where it fails to compile
+	// maybe first find "#map" and then look at the rest of the line
+	// and raise warnings when there are signs others than letters and underlines
 
 	std::regex const map_rgx("\\s*#map\\s+\\w+(?=\\s*\\n)");
 	std::regex const unif_rgx("uniform\\s+\\w+\\s+\\w+(?=\\s*;)");

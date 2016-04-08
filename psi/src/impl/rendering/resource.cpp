@@ -20,7 +20,7 @@
 
 #include "resource.hpp"
 
-#include <Magick++.h>
+#include <FreeImage.h>
 
 #include "../../util/file.hpp"
 namespace fs = boost::filesystem;
@@ -77,15 +77,53 @@ psi_rndr::MeshData psi_rndr::load_mesh(fs::path const& file) {
 }
 
 psi_rndr::TextureData psi_rndr::load_texture(fs::path const& file) {
-	Magick::Image img;
-	img.read(file.string());
+	// get image information
+	FREE_IMAGE_FORMAT format = FreeImage_GetFIFFromFilename(file.c_str());
+	if (format == FIF_UNKNOWN)
+		throw std::runtime_error("Invalid image file format.");
 
+	// load bitmap
+	auto bitmap = FreeImage_Load(format, file.c_str());
+	if (!bitmap)
+		throw std::runtime_error("Invalid or nonexistent image file.");
+
+	// convert to RGBA8
+	auto bitmap32 = FreeImage_ConvertTo32Bits(bitmap);
+	FreeImage_Unload(bitmap);
+
+	// get size information
+	auto width = FreeImage_GetWidth(bitmap32);
+	auto height = FreeImage_GetHeight(bitmap32);
+	if (width == 0 || width & width - 1 || height == 0 || height & height - 1)
+		throw std::runtime_error("Image dimensions not powers of two.");
+
+	// create object to store bitmap in
 	TextureData tex;
+	tex.width = width;
+	tex.height = height;
+	tex.encoding = TextureData::Encoding::RGB8;
 
-	tex.height = img.rows();
-	tex.width = img.columns();
+	// generate mipmaps
+	bool lowest_level_passed = false;
+	size_t level = 0;
+	while (!lowest_level_passed) {
+		auto prev = bitmap32;
+		bitmap32 = FreeImage_Rescale(bitmap32, width, height, FILTER_CATMULLROM);
+		//FreeImage_Unload(prev);
 
-	psi_log::debug("resource.cpp") << tex.height << " " << tex.width << "\n";
+		if (width == 1 || height == 1) {
+			lowest_level_passed = true;
+		}
+
+		unsigned char* bytes = FreeImage_GetBits(bitmap32);
+		size_t len = height * FreeImage_GetLine(bitmap32);
+		tex.data.emplace_back();
+		tex.data[level].assign(bytes, bytes + len);
+
+		width /= 2;
+		height /= 2;
+		level++;
+	}
 
 	return tex;
 }

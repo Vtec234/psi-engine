@@ -39,9 +39,9 @@ public:
 	void moveZ(float mult);
 
 	// rotate the pitch of this camera
-	void rotatePitch(float mult);
+	float rotatePitch(float mult);
 	// rotate the yaw of this camera
-	void rotateYaw(float mult);
+	float rotateYaw(float mult);
 
 	void adjustAspectRatio(float aspectRatio);
 
