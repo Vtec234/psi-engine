@@ -20,8 +20,7 @@
 
 #version 430
 
-
-smooth in vec3 coord_clip;
+smooth in vec2 uv;
 
 #map POSITION_FRAME_TEXTURE_SAMPLER
 uniform sampler2D pos_tex;
@@ -32,23 +31,23 @@ uniform sampler2D albedo_tex;
 #map REFL_ROUGH_FRAME_TEXTURE_SAMPLER
 uniform sampler2D refl_rough_tex;
 
-out vec4 fragColor;
+out vec4 frag_color;
 
 void main() {
-	if (coord_clip.x < 0.5) {
-		if (coord_clip.y < 0.5) {
-			fragColor = texture2D(pos_tex, coord_clip.xy * 2.0).rgba;
+	if (uv.x < 0.5) {
+		if (uv.y < 0.5) {
+			frag_color = texture2D(albedo_tex, uv * 2.0);
 		}
 		else {
-			fragColor = texture2D(norm_tex, vec2(coord_clip.x * 2.0, (coord_clip.y - 0.5) * 2.0)).rgba;
+			frag_color = texture2D(pos_tex, vec2(uv.x, uv.y - 0.5) * 2.0);
 		}
 	}
 	else {
-		if (coord_clip.y < 0.5) {
-			fragColor = texture2D(albedo_tex, vec2((coord_clip.x - 0.5) * 2.0, coord_clip.y * 2.0)).rgba;
+		if (uv.y < 0.5) {
+			frag_color = texture2D(refl_rough_tex, vec2(uv.x - 0.5, uv.y) * 2.0);
 		}
 		else {
-			fragColor = texture2D(refl_rough_tex, (coord_clip.xy - 0.5) * 2.0).rgba;
+			frag_color = texture2D(norm_tex, (uv - 0.5) * 2.0);
 		}
 	}
 }

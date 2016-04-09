@@ -213,7 +213,7 @@ public:
 			m_serv.window_service().register_keyboard_input_callback(
 				[this] (psi_serv::KeyboardInput k, psi_serv::InputAction a) {
 					if (a == psi_serv::InputAction::PRESSED && k == psi_serv::KeyboardInput::B) {
-						const_cast<psi_serv::IWindowService&>(m_serv.window_service()).set_mouse_block(!m_mouse_blocked);
+						m_serv.window_service().set_mouse_block(!m_mouse_blocked);
 						m_mouse_blocked = !m_mouse_blocked;
 					}
 				}
@@ -279,7 +279,14 @@ public:
 		tr.scale = {{ 1.0f, 1.0f, 1.0f }};
 		tr.orientation = {{ 1.0f, 0.0f, 0.0f, 0.0f }};
 
-		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, &(m_cam.cameraToClipMat4() * m_cam.worldToCameraMat4())[0][0]);
+		std::array<float, 16> unity =
+		{{
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+		}};
+		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, unity.data());
 		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, &(m_cam.cameraToClipMat4() * m_cam.worldToCameraMat4())[0][0]);
 
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::ALBEDO));

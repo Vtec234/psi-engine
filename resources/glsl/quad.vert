@@ -20,8 +20,7 @@
 
 #version 430
 
-
-smooth out vec3 coord_clip;
+smooth out vec2 uv;
 
 /// Use with glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 /// Idea of mapping from a screen space quad to camera space
@@ -31,9 +30,9 @@ void main() {
 	gl_Position.x = 2.0 * float(gl_VertexID & 1) - 1.0;
 	// 0 0 1 1
 	gl_Position.y = 2.0 * float((gl_VertexID & 2) >> 1) - 1.0;
-	// 1 1 1 1
+
 	gl_Position.z = 1.0;
 	gl_Position.w = 1.0;
 
-	coord_clip = vec3(gl_Position);
+	uv = (vec2(gl_Position) + 1.0) / 2.0;
 }

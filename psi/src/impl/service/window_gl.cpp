@@ -45,17 +45,24 @@ public:
 	}
 
 	void update_window() override {
+		if (m_block_mouse_changed) {
+			if (m_block_mouse)
+				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			else
+				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+			m_block_mouse_changed = false;
+		}
+
 		glfwSwapBuffers(m_window);
 		glfwPollEvents();
 
 		m_should_close = glfwWindowShouldClose(m_window) || glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
 	}
 
-	void set_mouse_block(bool block) override {
-		if (block)
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		else
-			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	void set_mouse_block(bool block) const override {
+		m_block_mouse = block;
+		m_block_mouse_changed = true;
 	}
 
 	bool should_close() const override {
@@ -232,6 +239,9 @@ private:
 
 	std::atomic<double> m_mouse_x;
 	std::atomic<double> m_mouse_y;
+
+	mutable std::atomic<bool> m_block_mouse;
+	mutable std::atomic<bool> m_block_mouse_changed;
 
 	mutable std::mutex m_keyboard_inputs_mut;
 	mutable std::vector<psi_serv::KeyboardInput> m_keyboard_inputs;

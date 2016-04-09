@@ -40,7 +40,7 @@ namespace psi_log {
 		WARNING,
 		/// Message informing about a non-standard action which does not require attention.
 		NOTICE,
-		/// Message informing about standard actions undertaken by the engine.
+		/// Message informing about a standard action undertaken by the engine.
 		INFO,
 		/// Message meant only for debugging purposes, superflouous otherwise.
 		DEBUG,

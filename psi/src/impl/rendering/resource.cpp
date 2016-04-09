@@ -94,7 +94,7 @@ psi_rndr::TextureData psi_rndr::load_texture(fs::path const& file) {
 	// get size information
 	auto width = FreeImage_GetWidth(bitmap32);
 	auto height = FreeImage_GetHeight(bitmap32);
-	if (width == 0 || width & width - 1 || height == 0 || height & height - 1)
+	if (width == 0 || width & (width - 1) || height == 0 || height & (height - 1))
 		throw std::runtime_error("Image dimensions not powers of two.");
 
 	// create object to store bitmap in

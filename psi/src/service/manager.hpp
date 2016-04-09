@@ -29,11 +29,7 @@
 
 
 namespace psi_serv {
-/// A manager for objects implements I..Service interfaces.
-/// The point of this manager is that a I..Service const& can safely be passed to any thread.
-/// A requirement for I..Service implementations is that each const function be safe
-/// with respect to other const functions, as well as non-const ones.
-/// Non-const functions can only be called by a single thread.
+/// A manager for objects implementing psi_serv::I..Service.
 class ServiceManager : psi_mark::ConstThreadsafe {
 public:
 	ServiceManager();

@@ -55,10 +55,10 @@ void psi_log::init(fs::path const& work_dir, Level max) {
 	INITIALIZED = true;
 
 	if (!LOG_FILE_OUT.good()) {
-		warning("Logger") << "Unable to create log.log file. Logging to stdout only.\n";
+		warning("log") << "Unable to create log.log file. Logging to stdout only.\n";
 	}
 
-	info("Logger") << "Initialized logger module.\n";
+	info("log") << "Initialized logger module.\n";
 }
 
 static inline std::string header(psi_log::Level lvl, std::string const& module, std::string const& part) {
