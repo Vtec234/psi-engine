@@ -91,6 +91,13 @@ public:
 		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
 		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::RR_ATTACHMENT, gl::TEXTURE_2D, m_refl_rough_frame_tex, 0);
 
+		// depth renderbuffer
+		GLuint rbo;
+		gl::GenRenderbuffers(1, &rbo);
+		gl::BindRenderbuffer(gl::RENDERBUFFER, rbo);
+		gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH24_STENCIL8, m_serv.window_service().width(), m_serv.window_service().height());
+		gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::DEPTH_STENCIL_ATTACHMENT, gl::RENDERBUFFER, rbo);
+
 		// initialize samplers at texture units
 		psi_gl::SamplerSettings set = {
 			gl::LINEAR,
