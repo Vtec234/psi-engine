@@ -5,8 +5,8 @@
 | (V)ertex count | 8                                |
 | (I)ndex count  | 8                                |
 | Bounding box   | 24                               |
-| \0             | 1                                |
-| Vertices       | V * sizeof(psi_util::VertexData) |
-| \0             | 1                                |
-| Indices        | I * 4                            |
-| \0             | 1                                |
+| MD5 Hash of /\ | 16                               |
+| -------------- | -------------------------------- |
+| Vertices       | V * sizeof(psi_rndr::VertexData) |
+| Indices        | I * sizeof(uint32_t)             |
+| MD5 Hash of /\ | 16                               |
