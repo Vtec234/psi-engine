@@ -37,10 +37,24 @@ class SystemGLRenderer : public psi_sys::ISystem {
 public:
 	SystemGLRenderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv)
 		: m_tasks(tasks)
-		, m_serv(serv) {}
+		, m_serv(serv)
+		, m_mrt_buf(std::vector<psi_gl::FramebufferRenderTargetCreationInfo>(), 2, 2) {}
 
 	uint64_t required_components() const override {
 		return psi_scene::component_type_entity_info.id | psi_scene::component_type_model_info.id | psi_scene::component_type_transform_info.id;
+	}
+
+	void create_mrt_framebuffer() {
+		std::vector<psi_gl::FramebufferRenderTargetCreationInfo> targets = {
+			{ true, true, gl::RGB16F, },
+			{ true, true, gl::RGB16F, },
+			{ true, true, gl::RGBA, },
+			{ true, true, gl::RGBA, },
+			{ false, false, gl::DEPTH_COMPONENT, },
+		};
+
+		auto const& win = m_serv.window_service();
+		new (&m_mrt_buf) psi_gl::MultipleRenderTargetFramebuffer(targets, win.width(), win.height());
 	}
 
 	void gl_state_setup() {
@@ -62,41 +76,6 @@ public:
 		// setup color & depth buffer clear values
 		gl::ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		gl::ClearDepth(1.0f);
-
-		// setup MRT framebuffer and texture
-		gl::GenFramebuffers(1, &m_mrt_framebuffer);
-		gl::BindFramebuffer(gl::FRAMEBUFFER, m_mrt_framebuffer);
-
-		// position vectors
-		gl::GenTextures(1, &m_pos_frame_tex);
-		gl::BindTexture(gl::TEXTURE_2D, m_pos_frame_tex);
-		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB16F, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGB, gl::FLOAT, 0);
-		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::POS_ATTACHMENT, gl::TEXTURE_2D, m_pos_frame_tex, 0);
-
-		// normal vectors
-		gl::GenTextures(1, &m_norm_frame_tex);
-		gl::BindTexture(gl::TEXTURE_2D, m_norm_frame_tex);
-		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB16F, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGB, gl::FLOAT, 0);
-		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::NORM_ATTACHMENT, gl::TEXTURE_2D, m_norm_frame_tex, 0);
-
-		// albedo
-		gl::GenTextures(1, &m_albedo_frame_tex);
-		gl::BindTexture(gl::TEXTURE_2D, m_albedo_frame_tex);
-		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
-		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::ALBEDO_ATTACHMENT, gl::TEXTURE_2D, m_albedo_frame_tex, 0);
-
-		// reflectiveness (coloured metalicness) in RGB, roughness in A
-		gl::GenTextures(1, &m_refl_rough_frame_tex);
-		gl::BindTexture(gl::TEXTURE_2D, m_refl_rough_frame_tex);
-		gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA, m_serv.window_service().width(), m_serv.window_service().height(), 0, gl::RGBA, gl::UNSIGNED_BYTE, 0);
-		gl::FramebufferTexture2D(gl::FRAMEBUFFER, psi_gl::RR_ATTACHMENT, gl::TEXTURE_2D, m_refl_rough_frame_tex, 0);
-
-		// depth renderbuffer
-		GLuint rbo;
-		gl::GenRenderbuffers(1, &rbo);
-		gl::BindRenderbuffer(gl::RENDERBUFFER, rbo);
-		gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH24_STENCIL8, m_serv.window_service().width(), m_serv.window_service().height());
-		gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::DEPTH_STENCIL_ATTACHMENT, gl::RENDERBUFFER, rbo);
 
 		// initialize samplers at texture units
 		psi_gl::SamplerSettings set = {
@@ -127,6 +106,9 @@ public:
 
 	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
 		gl_state_setup();
+		create_mrt_framebuffer();
+		m_frame_width = m_serv.window_service().width();
+		m_frame_height = m_serv.window_service().height();
 
 		std::hash<std::string> hash;
 		m_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
@@ -168,7 +150,7 @@ public:
 
 		// TEST
 		{
-			m_serv.resource_service().request_resource(hash(u8"meshes/cone"), hash(u8"mesh"), u8"meshes/cone");
+			m_serv.resource_service().request_resource(hash(u8"meshes/cone_flat"), hash(u8"mesh"), u8"meshes/cone_flat");
 
 			std::array<std::string, 3> textures = {{
 				u8"textures/default",
@@ -180,9 +162,9 @@ public:
 				m_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
 			}
 
-			auto msh = *m_serv.resource_service().retrieve_resource(hash(u8"meshes/cone"));
+			auto msh = *m_serv.resource_service().retrieve_resource(hash(u8"meshes/cone_flat"));
 			psi_gl::MeshBuffer buf(boost::any_cast<psi_rndr::MeshData>(msh->resource()));
-			m_uploaded_meshes.emplace(u8"meshes/cone", buf);
+			m_uploaded_meshes.emplace(u8"meshes/cone_flat", buf);
 
 			for (auto const& tex : textures) {
 				auto data = boost::any_cast<psi_rndr::TextureData>((*m_serv.resource_service().retrieve_resource(hash(tex)))->resource());
@@ -193,6 +175,14 @@ public:
 
 	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
 		// TODO handle changes in scene
+
+		auto const& win = m_serv.window_service();
+		if (m_frame_width != win.width() || m_frame_height != win.height()) {
+			m_frame_width = win.width();
+			m_frame_height = win.height();
+			create_mrt_framebuffer();
+			gl::Viewport(0, 0, m_frame_width, m_frame_height);
+		}
 
 		// TEST
 		{
@@ -240,11 +230,7 @@ public:
 					<< "\n";
 		}
 
-		gl::BindFramebuffer(gl::FRAMEBUFFER, m_mrt_framebuffer);
-
-		// specify all framebuffer attachments to be rendered to
-		GLuint attachments[4] = { psi_gl::POS_ATTACHMENT, psi_gl::NORM_ATTACHMENT, psi_gl::ALBEDO_ATTACHMENT, psi_gl::RR_ATTACHMENT, };
-		gl::DrawBuffers(4, attachments);
+		m_mrt_buf.bind();
 
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
@@ -275,12 +261,6 @@ public:
 		ent.model = 0;
 		ent.experiences_causality = true;
 
-		psi_scene::ComponentModel mdl;
-		//mdl.mesh_name = { u8"meshes/cone" };
-		//mdl.albedo_tex = { u8"textures/default" };
-		//mdl.reflectiveness_roughness_tex = { u8"textures/default" };
-		//mdl.normal_tex = { u8"textures/default_normal" };
-
 		psi_scene::ComponentTransform tr;
 		tr.pos = {{ 0.0f, -10.0f, 0.0f }};
 		tr.scale = {{ 1.0f, 1.0f, 1.0f }};
@@ -289,7 +269,7 @@ public:
 		std::array<float, 16> unity =
 		{{
 			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, -10.0f,
 			0.0f, 0.0f, 1.0f, 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f,
 		}};
@@ -306,23 +286,23 @@ public:
 		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_MAP));
 		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::REFL_ROUGH));
 
-		m_uploaded_meshes.at(u8"meshes/cone").draw(gl::TRIANGLES);
+		m_uploaded_meshes.at(u8"meshes/cone_flat").draw(gl::TRIANGLES);
 
 
 		// -- SECOND PASS --
-		gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+		m_mrt_buf.unbind();
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
 		gl::UseProgram(m_compiled_shaders[u8"deferred_quad"].handle);
 
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::POS_FRAME));
-		gl::BindTexture(gl::TEXTURE_2D, m_pos_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(0));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::NORM_FRAME));
-		gl::BindTexture(gl::TEXTURE_2D, m_norm_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(1));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::ALBEDO_FRAME));
-		gl::BindTexture(gl::TEXTURE_2D, m_albedo_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(2));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::REFL_ROUGH_FRAME));
-		gl::BindTexture(gl::TEXTURE_2D, m_refl_rough_frame_tex);
+		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(3));
 
 		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::POS_FRAME));
 		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_FRAME));
@@ -346,16 +326,15 @@ private:
 	std::unordered_map<std::string, psi_gl::MeshBuffer> m_uploaded_meshes;
 	std::unordered_map<std::string, psi_gl::Shader> m_compiled_shaders;
 
-	GLuint m_mrt_framebuffer;
-	GLuint m_pos_frame_tex;
-	GLuint m_norm_frame_tex;
-	GLuint m_albedo_frame_tex;
-	GLuint m_refl_rough_frame_tex;
+	psi_gl::MultipleRenderTargetFramebuffer m_mrt_buf;
 
 	double m_mouse_x;
 	double m_mouse_y;
 	double m_mouse_prev_x;
 	double m_mouse_prev_y;
+
+	uint32_t m_frame_width;
+	uint32_t m_frame_height;
 
 	bool m_mouse_blocked = true;
 };

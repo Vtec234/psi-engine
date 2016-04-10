@@ -100,6 +100,111 @@ void psi_gl::MeshBuffer::draw(GLenum primitives) {
 	gl::DrawElements(primitives, m_index_count, gl::UNSIGNED_INT, nullptr);
 }
 
+// -- MultipleRenderTargetFramebuffer --
+static inline GLenum internal_format_to_data_format(GLenum internal) {
+	switch (internal) {
+		case gl::RGB16F:
+			return gl::RGB;
+
+		case gl::RGBA:
+			return gl::RGBA;
+
+		case gl::DEPTH_COMPONENT:
+			return gl::DEPTH_COMPONENT;
+
+		default:
+			ASSERT(false);
+	}
+}
+
+static inline GLenum internal_format_to_type(GLenum internal) {
+	switch (internal) {
+		case gl::RGB16F:
+			return gl::FLOAT;
+
+		case gl::RGBA:
+			return gl::UNSIGNED_BYTE;
+
+		case gl::DEPTH_COMPONENT:
+			return gl::FLOAT;
+
+		default:
+			ASSERT(false);
+	}
+}
+
+psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::vector<FramebufferRenderTargetCreationInfo> targets, uint32_t width, uint32_t height) {
+	gl::GenFramebuffers(1, &m_framebuffer);
+	gl::BindFramebuffer(gl::FRAMEBUFFER, m_framebuffer);
+
+	GLint last_color = 0;
+	bool depth_attached = false;
+	std::vector<GLenum> attachments;
+
+	for (auto const& info : targets) {
+		GLuint handle;
+
+		if (info.texture_or_not_renderbuffer) {
+			gl::GenTextures(1, &handle);
+			gl::BindTexture(gl::TEXTURE_2D, handle);
+			gl::TexImage2D(gl::TEXTURE_2D, 0, info.internal_format, width, height, 0, internal_format_to_data_format(info.internal_format), internal_format_to_type(info.internal_format), 0);
+
+			if (info.color_or_not_depth) {
+				gl::FramebufferTexture2D(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0 + last_color, gl::TEXTURE_2D, handle, 0);
+				attachments.push_back(gl::COLOR_ATTACHMENT0 + last_color);
+				++last_color;
+			}
+			else {
+				ASSERT(!depth_attached);
+				gl::FramebufferTexture2D(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, gl::TEXTURE_2D, handle, 0);
+				depth_attached = true;
+			}
+
+			m_textures.push_back(handle);
+		}
+		else {
+			gl::GenRenderbuffers(1, &handle);
+			gl::BindRenderbuffer(gl::RENDERBUFFER, handle);
+			gl::RenderbufferStorage(gl::RENDERBUFFER, info.internal_format, width, height);
+
+			if (info.color_or_not_depth) {
+				gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0 + last_color, gl::RENDERBUFFER, handle);
+				attachments.push_back(gl::COLOR_ATTACHMENT0 + last_color);
+				++last_color;
+			}
+			else {
+				ASSERT(!depth_attached);
+				gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, gl::RENDERBUFFER, handle);
+				depth_attached = true;
+			}
+
+			m_renderbuffers.push_back(handle);
+		}
+	}
+
+	gl::DrawBuffers(attachments.size(), attachments.data());
+}
+
+psi_gl::MultipleRenderTargetFramebuffer::~MultipleRenderTargetFramebuffer() {
+	gl::DeleteTextures(m_textures.size(), m_textures.data());
+	gl::DeleteRenderbuffers(m_renderbuffers.size(), m_renderbuffers.data());
+
+	gl::DeleteFramebuffers(1, &m_framebuffer);
+}
+
+void psi_gl::MultipleRenderTargetFramebuffer::bind() {
+	gl::BindFramebuffer(gl::FRAMEBUFFER, m_framebuffer);
+}
+
+void psi_gl::MultipleRenderTargetFramebuffer::unbind() {
+	gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+}
+
+GLuint psi_gl::MultipleRenderTargetFramebuffer::texture_target_handle(size_t index) {
+	ASSERT(index < m_textures.size());
+	return m_textures[index];
+}
+
 // -- SAMPLERS --
 void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, psi_gl::TextureUnit tex_unit) {
 	GLuint sampler;

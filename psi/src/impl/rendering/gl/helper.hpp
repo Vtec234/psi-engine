@@ -48,6 +48,34 @@ private:
 	uint32_t m_index_count;
 };
 
+struct FramebufferRenderTargetCreationInfo {
+	// true for texture
+	// false for renderbuffer
+	bool texture_or_not_renderbuffer;
+	// true for color
+	// false for depth
+	bool color_or_not_depth;
+	GLenum internal_format;
+};
+
+class MultipleRenderTargetFramebuffer {
+public:
+	MultipleRenderTargetFramebuffer(std::vector<FramebufferRenderTargetCreationInfo>, uint32_t width, uint32_t height);
+	~MultipleRenderTargetFramebuffer();
+
+	MultipleRenderTargetFramebuffer(MultipleRenderTargetFramebuffer const&) = delete;
+	MultipleRenderTargetFramebuffer& operator=(MultipleRenderTargetFramebuffer const&) = delete;
+
+	void bind();
+	void unbind();
+	GLuint texture_target_handle(size_t index);
+
+private:
+	GLuint m_framebuffer;
+	std::vector<GLuint> m_textures;
+	std::vector<GLuint> m_renderbuffers;
+};
+
 enum class TextureUnit {
 	POS_FRAME = 1,
 	NORM_FRAME = 2,
