@@ -200,6 +200,28 @@ inline GLenum tex_format(psi_rndr::TextureData::Encoding enc) {
 	}
 }
 
+inline GLenum tex_type(psi_rndr::TextureData::Encoding enc) {
+	switch (enc) {
+		case psi_rndr::TextureData::Encoding::RGB8:
+		case psi_rndr::TextureData::Encoding::RGBA8:
+			return gl::UNSIGNED_BYTE;
+
+		case psi_rndr::TextureData::Encoding::RGB16:
+		case psi_rndr::TextureData::Encoding::RGBA16:
+			return gl::UNSIGNED_SHORT;
+
+		case psi_rndr::TextureData::Encoding::RGB32:
+		case psi_rndr::TextureData::Encoding::RGBA32:
+			return gl::UNSIGNED_INT;
+
+		case psi_rndr::TextureData::Encoding::RGB16F:
+			return gl::FLOAT;
+
+		default:
+			ASSERT(false);
+	}
+}
+
 inline GLuint upload_tex(psi_rndr::TextureData const& tex) {
 	GLuint tex_handle;
 
@@ -212,12 +234,12 @@ inline GLuint upload_tex(psi_rndr::TextureData const& tex) {
 		gl::TexImage2D(
 			gl::TEXTURE_2D,
 			i_lvl,
-			psi_gl::tex_internal_format(tex.encoding),
+			tex_internal_format(tex.encoding),
 			width,
 			height,
 			0,
 			tex_format(tex.encoding),
-			gl::UNSIGNED_BYTE,
+			tex_type(tex.encoding),
 			tex.data[i_lvl].data()
 		);
 
