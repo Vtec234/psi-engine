@@ -40,6 +40,103 @@ namespace po = boost::program_options;
 static Assimp::Importer importer;
 
 
+void calc_bounding_box(psi_rndr::MeshData& mesh) {
+	auto& min = mesh.min_pos;
+	auto& max = mesh.max_pos;
+
+	for (auto const& v : mesh.vertices) {
+		auto const& p = v.pos;
+
+		min[0] = min[0] > p[0] ? p[0] : min[0];
+		min[1] = min[1] > p[1] ? p[1] : min[1];
+		min[2] = min[2] > p[2] ? p[2] : min[2];
+
+		max[0] = max[0] < p[0] ? p[0] : max[0];
+		max[1] = max[1] < p[1] ? p[1] : max[1];
+		max[2] = max[2] < p[2] ? p[2] : max[2];
+	}
+}
+
+// a - b
+template <typename T, size_t N>
+std::array<T, N> array_sub(std::array<T, N> const& a, std::array<T, N> const& b) {
+	std::array<T, N> result;
+	for (size_t i = 0; i < N; ++i) {
+		result[i] = a[i] - b[i];
+	}
+	return result;
+}
+
+// a + b
+template <typename T, size_t N>
+std::array<T, N> array_add(std::array<T, N> const& a, std::array<T, N> const& b) {
+	std::array<T, N> result;
+	for (size_t i = 0; i < N; ++i) {
+		result[i] = a[i] + b[i];
+	}
+	return result;
+}
+
+template <typename T, size_t N>
+std::array<T, N> array_normalize(std::array<T, N> const& a) {
+	T sum = 0;
+	for (auto e : a) {
+		sum += e * e;
+	}
+	T len = sqrt(sum);
+	std::array<T, N> result;
+	for (size_t i = 0; i < N; ++i) {
+		result[i] = a[i] / len;
+	}
+	return result;
+}
+
+void calc_tangents(psi_rndr::MeshData& mesh) {
+	for (size_t i_ind = 0; i_ind < mesh.indices.size(); i_ind += 3) {
+		psi_rndr::VertexData&
+			v0 = mesh.vertices[mesh.indices[i_ind]],
+			v1 = mesh.vertices[mesh.indices[i_ind + 1]],
+			v2 = mesh.vertices[mesh.indices[i_ind + 2]];
+
+		auto const&
+			p0 = v0.pos,
+			p1 = v1.pos,
+			p2 = v2.pos;
+
+		auto const&
+			uv0 = v0.uv,
+			uv1 = v1.uv,
+			uv2 = v2.uv;
+
+		auto&
+			t0 = v0.tan,
+			t1 = v1.tan,
+			t2 = v2.tan;
+
+		auto edge1 = array_sub(p1, p0);
+		auto edge2 = array_sub(p2, p0);
+
+		auto dUV1 = array_sub(uv1, uv0);
+		auto dUV2 = array_sub(uv2, uv0);
+
+		float f = 1.0f / (dUV1[0] * dUV2[1] - dUV1[1] * dUV2[0]);
+
+		std::array<float, 3> tangent = {{ 0.0f, 0.0f, 0.0f }};
+
+		tangent[0] = f * (edge1[0] * dUV2[1] - edge2[0] * dUV1[1]);
+		tangent[1] = f * (edge1[1] * dUV2[1] - edge2[1] * dUV1[1]);
+		tangent[2] = f * (edge1[2] * dUV2[1] - edge2[2] * dUV1[1]);
+
+		t0 = array_add(t0, tangent);
+		t1 = array_add(t1, tangent);
+		t2 = array_add(t2, tangent);
+	}
+
+	for (auto& v : mesh.vertices) {
+		v.tan = array_normalize(v.tan);
+	}
+}
+
 /// Tries to load the specified mesh file
 /// and save a converted version to the specified output directory.
 /// @throw if anything goes wrong during the process
@@ -123,9 +220,8 @@ void load_and_serialize_mesh(fs::path const& file, fs::path const& out_dir) {
 				out_mesh.indices.push_back(face->mIndices[i_index]);
 		}
 
-		// TODO
-		//mesh->calcBoundingBox();
-		//mesh->calcTangents();
+		calc_bounding_box(out_mesh);
+		calc_tangents(out_mesh);
 
 		// create file
 		fs::path out_file = out_dir;
