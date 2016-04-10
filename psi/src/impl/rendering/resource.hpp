@@ -75,7 +75,7 @@ struct TextureData {
 
 	/// Vector of mipmaps, each one containing data in the specified encoding.
 	/// First element should be largest mipmap.
-	std::vector<std::vector<char>> data;
+	std::vector<std::vector<unsigned char>> data;
 
 	uint32_t width;
 	uint32_t height;
