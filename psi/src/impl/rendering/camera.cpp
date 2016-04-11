@@ -20,116 +20,98 @@
 
 #include "camera.hpp"
 
-#include <glm/detail/func_geometric.hpp>
-#include <glm/detail/func_matrix.hpp>
 
-
-const glm::vec3
-	psi_rndr::Camera::UP_DIR_VEC = glm::vec3(0.0f, 1.0f, 0.0f);
-
-const float
-	psi_rndr::Camera::VIEW_FRUSTUM_SCALE = 1.0f / tan(FOV_DEG * (float(M_PI) * 2.0f / 360.0f) / 2.0f);
-
-psi_rndr::Camera::Camera()
-	: m_cameraPos(0.0f, 0.0f, 5.0f)
-	, m_camPitchDeg(90.0f)
-	, m_camYawDeg(0.0f)
-	, m_camRollDeg(0.0f)
-	, m_worldToCameraIsDirty(true) {
-	// calculate the GLCameraToClipMatrix base with default aspect ratio of 1.0f
-	m_cameraToClipMat4[0].x = VIEW_FRUSTUM_SCALE;
-	m_cameraToClipMat4[1].y = VIEW_FRUSTUM_SCALE;
-	m_cameraToClipMat4[2].z = (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR);
-	m_cameraToClipMat4[2].w = -1.0f;
-	m_cameraToClipMat4[3].z = (2 * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR);
+void psi_rndr::IsometricTransform::translate_in_local(Eigen::Vector3f const& v) {
+	m_position += m_orientation._transformVector(v);
+	m_world_to_local_is_dirty = true;
+	m_local_to_world_is_dirty = true;
 }
 
-psi_rndr::Camera::~Camera() {}
+void psi_rndr::IsometricTransform::translate_in_world(Eigen::Vector3f const& v) {
+	m_position += v;
+	m_world_to_local_is_dirty = true;
+	m_local_to_world_is_dirty = true;
+}
 
-glm::mat4 const& psi_rndr::Camera::worldToCameraMat4() {
-	if (m_worldToCameraIsDirty) {
-		// -- CARTESIAN Camera SPACE VECTOR IN TERMS OF WORLD SPACE --
-		const float degToRadMult = static_cast<float>(M_PI)* 2.0f / 360.0f;
+void psi_rndr::IsometricTransform::rotate_in_local(Eigen::Vector3f const& axis, float angle_deg) {
+	float half_angle_rad = angle_deg * float(M_PI) / 360.0f;
+	auto sax = m_orientation._transformVector(axis) * sinf(half_angle_rad);
+	auto c = cosf(half_angle_rad);
+	Eigen::Quaternionf rot(c, sax.x(), sax.y(), sax.z());
+	m_orientation = rot * m_orientation;
+	m_world_to_local_is_dirty = true;
+	m_local_to_world_is_dirty = true;
+}
 
-		// the radian angles from degree pitch and yaw
-		float theta = m_camPitchDeg * degToRadMult;
-		float phi = m_camYawDeg * degToRadMult;
+void psi_rndr::IsometricTransform::rotate_in_world(Eigen::Vector3f const& axis, float angle_deg) {
+	float half_angle_rad = angle_deg * float(M_PI) / 360.0f;
+	auto sax = axis * sinf(half_angle_rad);
+	auto c = cosf(half_angle_rad);
+	Eigen::Quaternionf rot(c, sax.x(), sax.y(), sax.z());
+	m_orientation = rot * m_orientation;
+	m_world_to_local_is_dirty = true;
+	m_local_to_world_is_dirty = true;
+}
 
-		// trigonometric functions
-		float sinTheta = sinf(theta);
-		float cosTheta = cosf(theta);
-		float sinPhi = sinf(phi);
-		float cosPhi = cosf(phi);
+Eigen::Vector3f const& psi_rndr::IsometricTransform::position() {
+	return m_position;
+}
 
-		// Cartesian from spherical -> x,y,z from r, pitch, yaw
-		m_camLookDir = glm::normalize(glm::vec3(sinTheta * sinPhi, cosTheta, -sinTheta * cosPhi));
+Eigen::Matrix4f const& psi_rndr::IsometricTransform::world_to_local() {
+	if (m_world_to_local_is_dirty) {
+		m_world_to_local = local_to_world().inverse();
 
-		// right and up direction
-		m_camRightDir = glm::normalize(glm::cross(m_camLookDir, UP_DIR_VEC));
-		m_camUpDir = glm::cross(m_camRightDir, m_camLookDir);
-
-		// -- WORLD SPACE TO Camera SPACE PROJECTION MATRIX --
-		// rotation matrix
-		glm::mat4 rotationMat4(1.0f);
-		rotationMat4[0] = glm::vec4(m_camRightDir, 0.0f);
-		rotationMat4[1] = glm::vec4(m_camUpDir, 0.0f);
-		rotationMat4[2] = glm::vec4(-m_camLookDir, 0.0f);
-		rotationMat4 = glm::transpose(rotationMat4);
-
-		// translation matrix
-		glm::mat4 translationMat4(1.0f);
-		translationMat4[3] = glm::vec4(-m_cameraPos, 1.0f);
-		m_worldToCameraIsDirty = true;
-		// projection matrix
-		m_worldToCameraMat4 = rotationMat4 * translationMat4;
-
-		m_worldToCameraIsDirty = false;
+		m_world_to_local_is_dirty = false;
 	}
 
-	return m_worldToCameraMat4;
+	return m_world_to_local;
 }
 
-void psi_rndr::Camera::adjustAspectRatio(float aspectRatio) {
-	m_cameraToClipMat4[0].x = VIEW_FRUSTUM_SCALE / aspectRatio;
+Eigen::Matrix4f const& psi_rndr::IsometricTransform::local_to_world() {
+	if (m_local_to_world_is_dirty) {
+		Eigen::Matrix4f translation;
+		translation << 1, 0, 0, 0,
+					   0, 1, 0, 0,
+					   0, 0, 1, 0,
+					   0, 0, 0, 1;
+
+		Eigen::Matrix4f rotation = translation;
+
+		translation.col(3) = Eigen::Vector4f(m_position.x(), m_position.y(), m_position.z(), 1.0f);
+
+		rotation.topLeftCorner<3,3>() = m_orientation.matrix();
+		m_local_to_world = translation * rotation;
+
+		m_local_to_world_is_dirty = false;
+	}
+
+	return m_local_to_world;
 }
 
-void psi_rndr::Camera::moveX(float mult) {
-	m_cameraPos = m_cameraPos + mult * m_camRightDir;
+psi_rndr::ClipMatrix::ClipMatrix() {
+	constexpr float
+		Z_NEAR = 0.1f,
+		Z_FAR = 1000.0f,
+		DEFAULT_FOV_DEG = 75.0f;
 
-	m_worldToCameraIsDirty = true;
+	m_view_frustum_scale = 1.0f / tan(DEFAULT_FOV_DEG * float(M_PI) / 360.0f);
+
+	m_the_matrix << m_view_frustum_scale, 0,                    0,                                   0,
+					0,                    m_view_frustum_scale, 0,                                   0,
+					0,                    0,                    (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR), (2 * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR),
+					0,                    0,                    -1.0f,                               1;
 }
 
-void psi_rndr::Camera::moveY(float mult) {
-	m_cameraPos = m_cameraPos + mult * UP_DIR_VEC;
-
-	m_worldToCameraIsDirty = true;
+void psi_rndr::ClipMatrix::adjust_aspect_ratio(float ratio) {
+	m_the_matrix(0,0) = m_view_frustum_scale / ratio;
 }
 
-void psi_rndr::Camera::moveZ(float mult) {
-	m_cameraPos = m_cameraPos + mult * m_camLookDir;
-
-	m_worldToCameraIsDirty = true;
+void psi_rndr::ClipMatrix::adjust_fov(float fov) {
+	float ratio = m_view_frustum_scale / m_the_matrix(0,0);
+	m_view_frustum_scale = 1.0f / tan(fov * float(M_PI) / 360.0f);
+	m_the_matrix(0,0) = m_view_frustum_scale / ratio;
 }
 
-float psi_rndr::Camera::rotatePitch(float mult) {
-	m_camPitchDeg += mult;
-
-	m_camPitchDeg = glm::clamp(m_camPitchDeg, 1.0f, 179.0f);
-
-	m_worldToCameraIsDirty = true;
-
-	return m_camPitchDeg;
-}
-
-float psi_rndr::Camera::rotateYaw(float mult) {
-	m_camYawDeg += mult;
-
-	if (m_camYawDeg < 0.0f)
-		m_camYawDeg = 359.0f;
-	else if (m_camYawDeg > 359.0f)
-		m_camYawDeg = 0.0f;
-
-	m_worldToCameraIsDirty = true;
-
-	return m_camYawDeg;
+Eigen::Matrix4f const& psi_rndr::ClipMatrix::to_clip() {
+	return m_the_matrix;
 }

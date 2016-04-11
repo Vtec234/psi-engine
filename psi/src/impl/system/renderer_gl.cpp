@@ -57,14 +57,47 @@ public:
 		new (&m_mrt_buf) psi_gl::MultipleRenderTargetFramebuffer(targets, win.width(), win.height());
 	}
 
-	void gl_state_setup() {
+	enum class TextureUnit : GLuint {
+		MRT_POSITION = 1,
+		MRT_NORMAL = 2,
+		MRT_ALBEDO = 3,
+		MRT_REFLECTIVENESS_ROUGHNESS = 4,
+		TEX_NORMAL = 5,
+		TEX_ALBEDO = 6,
+		TEX_REFLECTIVENESS_ROUGHNESS = 7,
+	};
+
+	void create_tex_samplers() {
+		psi_gl::SamplerSettings set = {
+			gl::LINEAR,
+			gl::LINEAR_MIPMAP_LINEAR,
+			gl::REPEAT,
+			gl::REPEAT,
+			16.0f,
+		};
+
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::TEX_NORMAL));
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::TEX_ALBEDO));
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
+
+		// frame G-Buffer samplers should filter from nearest pixel instead of linearly from several
+		set.mag_filter = gl::NEAREST;
+		set.min_filter = gl::NEAREST;
+
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::MRT_POSITION));
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::MRT_NORMAL));
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::MRT_ALBEDO));
+		psi_gl::create_sampler_at_texture_unit(set, GLuint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
+
+	}
+
+	void gl_3d_state_setup() {
 		// enable face culling, counter-clockwise face is front
 		gl::Enable(gl::CULL_FACE);
 		gl::CullFace(gl::BACK);
 		gl::FrontFace(gl::CCW);
 
 		// ensure MSAA is enabled
-		// TODO does MSAA work with deferred?
 		gl::Enable(gl::MULTISAMPLE);
 
 		// enable depth test
@@ -72,43 +105,12 @@ public:
 		gl::DepthMask(true);
 		gl::DepthFunc(gl::LEQUAL);
 		gl::DepthRange(0.0f, 1.0f);
-
-		// setup color & depth buffer clear values
-		gl::ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		gl::ClearDepth(1.0f);
-
-		// initialize samplers at texture units
-		psi_gl::SamplerSettings set = {
-			gl::LINEAR,
-			gl::LINEAR_MIPMAP_LINEAR,
-			gl::REPEAT,
-			gl::REPEAT,
-			16.0f
-		};
-
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::NORM_MAP);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::ALBEDO);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::REFL_ROUGH);
-
-		// frame G-Buffer samplers should filter from nearest pixel instead of linearly from several
-		set.mag_filter = gl::NEAREST;
-		set.min_filter = gl::NEAREST;
-
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::POS_FRAME);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::NORM_FRAME);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::ALBEDO_FRAME);
-		psi_gl::create_sampler_at_texture_unit(set, psi_gl::TextureUnit::REFL_ROUGH_FRAME);
-	}
-
-	void gl_state_cleanup() {
-		// TODO
 	}
 
 	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
-		gl_state_setup();
+		gl_3d_state_setup();
 		create_mrt_framebuffer();
-		m_frame_width = m_serv.window_service().width();
-		m_frame_height = m_serv.window_service().height();
+		create_tex_samplers();
 
 		std::hash<std::string> hash;
 		m_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
@@ -148,7 +150,10 @@ public:
 			}
 		}
 
-		// TEST
+
+
+
+		//  -- TEST --
 		{
 			m_serv.resource_service().request_resource(hash(u8"meshes/cone_flat"), hash(u8"mesh"), u8"meshes/cone_flat");
 
@@ -171,17 +176,20 @@ public:
 				m_uploaded_textures[tex] = psi_gl::upload_tex(data);
 			}
 		}
+		// -- END TEST --
 	}
 
 	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
 		// TODO handle changes in scene
 
-		auto const& win = m_serv.window_service();
-		if (m_frame_width != win.width() || m_frame_height != win.height()) {
-			m_frame_width = win.width();
-			m_frame_height = win.height();
+		auto width = m_serv.window_service().width();
+	 	auto height = m_serv.window_service().height();
+
+		if (m_frame_width != width || m_frame_height != height) {
+			m_frame_width = width;
+			m_frame_height = height;
 			create_mrt_framebuffer();
-			gl::Viewport(0, 0, m_frame_width, m_frame_height);
+			gl::Viewport(0, 0, width, height);
 		}
 
 		// TEST
@@ -195,17 +203,17 @@ public:
 			auto keys = m_serv.window_service().active_keyboard_inputs();
 			for (auto k : keys) {
 				if (k == psi_serv::KeyboardInput::W)
-					m_cam.moveZ(+0.2f);
+					m_cam.translate_in_local({0.0f, 0.0f, -0.2f});
 				if (k == psi_serv::KeyboardInput::S)
-					m_cam.moveZ(-0.2f);
+					m_cam.translate_in_local({0.0f, 0.0f, +0.2f});
 				if (k == psi_serv::KeyboardInput::A)
-					m_cam.moveX(-0.2f);
+					m_cam.translate_in_local({-0.2f, 0.0f, 0.0f});
 				if (k == psi_serv::KeyboardInput::D)
-					m_cam.moveX(+0.2f);
+					m_cam.translate_in_local({+0.2f, 0.0f, 0.0f});
 				if (k == psi_serv::KeyboardInput::Q)
-					m_cam.moveY(-0.2f);
+					m_cam.translate_in_local({0.0f, -0.2f, 0.0f});
 				if (k == psi_serv::KeyboardInput::E)
-					m_cam.moveY(+0.2f);
+					m_cam.translate_in_local({0.0f, +0.2f, 0.0f});
 			}
 			m_serv.window_service().register_keyboard_input_callback(
 				[this] (psi_serv::KeyboardInput k, psi_serv::InputAction a) {
@@ -217,24 +225,17 @@ public:
 			);
 		}
 		if (m_mouse_blocked) {
-			psi_log::debug("renderer_gl")
-					<< m_cam.cameraPosition().x
-					<< " "
-					<< m_cam.cameraPosition().y
-					<< " "\
-					<< m_cam.cameraPosition().z
-					<< " "
-					<< m_cam.rotatePitch((m_mouse_y - m_mouse_prev_y)/50.0f)
-					<< " "
-					<< m_cam.rotateYaw((m_mouse_x - m_mouse_prev_x)/50.0f)
-					<< "\n";
+			m_cam.rotate_in_local({-1.0f, 0.0f, 0.0f}, (m_mouse_y - m_mouse_prev_y)/50.0f);
+			m_cam.rotate_in_world({0.0f, -1.0f, 0.0f}, (m_mouse_x - m_mouse_prev_x)/50.0f);
 		}
 
 		m_mrt_buf.bind();
 
+		gl::ClearDepth(1.0f);
+		gl::ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-		m_cam.adjustAspectRatio(m_serv.window_service().aspect_ratio());
+		m_clip.adjust_aspect_ratio(m_serv.window_service().aspect_ratio());
 
 		auto const& sh = m_compiled_shaders[u8"deferred_gbuffer"];
 		gl::UseProgram(sh.handle);
@@ -249,10 +250,9 @@ public:
 				gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, nullptr);
 				gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, nullptr);
 
-				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::ALBEDO));
-				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_MAP));
-				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::REFL_ROUGH));
-
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_ALBEDO));
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_NORMAL));
+				gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
 			}
 		}
 
@@ -266,25 +266,24 @@ public:
 		tr.scale = {{ 1.0f, 1.0f, 1.0f }};
 		tr.orientation = {{ 1.0f, 0.0f, 0.0f, 0.0f }};
 
-		std::array<float, 16> unity =
-		{{
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, -10.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f,
-		}};
+		Eigen::Matrix4f unity;
+		unity << 1, 0, 0, 0,
+				 0, 1, 0, 0,
+				 0, 0, 1, 0,
+				 0, 0, 0, 1;
 		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, unity.data());
-		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, &(m_cam.cameraToClipMat4() * m_cam.worldToCameraMat4())[0][0]);
+		Eigen::Matrix4f local_to_clip = m_clip.to_clip() * m_cam.world_to_local();
+		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, local_to_clip.data());
 
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::ALBEDO));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_ALBEDO));
 		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default"));
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::REFL_ROUGH));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
 		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default"));
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::NORM_MAP));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_NORMAL));
 		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default_normal"));
-		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::ALBEDO));
-		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_MAP));
-		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::REFL_ROUGH));
+		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_ALBEDO));
+		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_NORMAL));
+		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
 
 		m_uploaded_meshes.at(u8"meshes/cone_flat").draw(gl::TRIANGLES);
 
@@ -295,19 +294,19 @@ public:
 
 		gl::UseProgram(m_compiled_shaders[u8"deferred_quad"].handle);
 
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::POS_FRAME));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_POSITION));
 		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(0));
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::NORM_FRAME));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_NORMAL));
 		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(1));
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::ALBEDO_FRAME));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_ALBEDO));
 		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(2));
-		gl::ActiveTexture(gl::TEXTURE0 + GLint(psi_gl::TextureUnit::REFL_ROUGH_FRAME));
+		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
 		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(3));
 
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::POS_FRAME));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::NORM_FRAME));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::ALBEDO_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::ALBEDO_FRAME));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER), GLint(psi_gl::TextureUnit::REFL_ROUGH_FRAME));
+		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_POSITION));
+		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_NORMAL));
+		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::ALBEDO_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_ALBEDO));
+		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
 
 		gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
 	}
@@ -320,7 +319,8 @@ private:
 	psi_thread::TaskManager const& m_tasks;
 	psi_serv::ServiceManager const& m_serv;
 
-	psi_rndr::Camera m_cam;
+	psi_rndr::IsometricTransform m_cam;
+	psi_rndr::ClipMatrix m_clip;
 
 	std::unordered_map<std::string, GLuint> m_uploaded_textures;
 	std::unordered_map<std::string, psi_gl::MeshBuffer> m_uploaded_meshes;

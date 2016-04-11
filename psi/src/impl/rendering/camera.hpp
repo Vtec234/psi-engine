@@ -20,74 +20,46 @@
 
 #pragma once
 
-#include <glm/mat4x4.hpp>
-#include <glm/vec3.hpp>
+#include <eigen3/Eigen/Geometry>
 
 
 namespace psi_rndr {
-// TODO redo with quaternions
-class Camera {
+class IsometricTransform {
 public:
-	Camera();
-	~Camera();
+	void translate_in_local(Eigen::Vector3f const&);
+	void translate_in_world(Eigen::Vector3f const&);
 
-	// move the camera on camera space X axis
-	void moveX(float mult);
-	// move the camera on camera space Y axis
-	void moveY(float mult);
-	// move the camera on camera space Z axis
-	void moveZ(float mult);
+	void rotate_in_local(Eigen::Vector3f const& axis, float angle_deg);
+	void rotate_in_world(Eigen::Vector3f const& axis, float angle_deg);
 
-	// rotate the pitch of this camera
-	float rotatePitch(float mult);
-	// rotate the yaw of this camera
-	float rotateYaw(float mult);
+	Eigen::Vector3f const& position();
 
-	void adjustAspectRatio(float aspectRatio);
-
-	// returns the projection matrix [world space -> this camera space]
-	glm::mat4 const& worldToCameraMat4();
-
-	glm::vec3 const& cameraPosition() const { return m_cameraPos; }
-
-	glm::mat4 const& cameraToClipMat4() const { return m_cameraToClipMat4; }
+	Eigen::Matrix4f const& world_to_local();
+	Eigen::Matrix4f const& local_to_world();
 
 private:
-	// -- WORLD SPACE TO CAMERA SPACE --
-	static constexpr float
-		// near and far plane distances
-		Z_NEAR = 0.1f,
-		Z_FAR = 1000.0f,
-		FOV_DEG = 70.0f;
+	Eigen::Vector3f m_position = {0.0f, 0.0f, 0.0f};
+	Eigen::Quaternionf m_orientation = {1.0f, 0.0f, 0.0f, 0.0f};
 
-	// no can do constexpr tan(..)
-	// formula: 1 / tan(FOV_DEG * (PI * 2 / 360) / 2);
-	static const float VIEW_FRUSTUM_SCALE;
+	Eigen::Matrix4f m_world_to_local;
+	bool m_world_to_local_is_dirty = true;
 
-	static const glm::vec3
-		UP_DIR_VEC;
+	Eigen::Matrix4f m_local_to_world;
+	bool m_local_to_world_is_dirty = true;
+};
 
-	// the camera position in Cartesian coordinates [world space]
-	glm::vec3 m_cameraPos;
+class ClipMatrix {
+public:
+	ClipMatrix();
+	~ClipMatrix() = default;
 
-	// the pitch of the camera in degrees [1; 179]
-	float m_camPitchDeg;
-	// the yaw of the camera in degrees [0; 359]
-	float m_camYawDeg;
-	// the roll of the camera in degrees [?; ?]
-	float m_camRollDeg;
+	void adjust_aspect_ratio(float);
+	void adjust_fov(float);
 
-	// three vectors representing the camera space
-	glm::vec3 m_camLookDir;
-	glm::vec3 m_camUpDir;
-	glm::vec3 m_camRightDir;
+	Eigen::Matrix4f const& to_clip();
 
-	// a world space to camera space transformation matrix
-	glm::mat4 m_worldToCameraMat4;
-	bool m_worldToCameraIsDirty;
-
-	// -- CAMERA SPACE TO CLIP SPACE --
-	// a camera space to clip space transformation matrix
-	glm::mat4 m_cameraToClipMat4;
+private:
+	Eigen::Matrix4f m_the_matrix;
+	float m_view_frustum_scale;
 };
 } // namespace psi_rndr

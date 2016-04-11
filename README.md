@@ -16,6 +16,8 @@ A sample usage of the engine.
 - [GLFW](http://www.glfw.org/) >= 3.1.2
 - [Intel TBB](https://www.threadingbuildingblocks.org/) >= 4.4
 - [glLoadGen](https://bitbucket.org/alfonse/glloadgen/wiki/Home/) Included
+- [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) >= 3.2.8
+- [FreeImagePlus](http://freeimage.sourceforge.net/index.html) >= 3.17.0
 
 ### Building:
 ###### Linux:

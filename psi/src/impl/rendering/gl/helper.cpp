@@ -206,7 +206,7 @@ GLuint psi_gl::MultipleRenderTargetFramebuffer::texture_target_handle(size_t ind
 }
 
 // -- SAMPLERS --
-void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, psi_gl::TextureUnit tex_unit) {
+void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, GLuint tex_unit) {
 	GLuint sampler;
 
 	gl::GenSamplers(1, &sampler);
@@ -217,7 +217,7 @@ void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, ps
 	gl::SamplerParameteri(sampler, gl::TEXTURE_WRAP_T, settings.wrap_T);
 	gl::SamplerParameterf(sampler, gl::TEXTURE_MAX_ANISOTROPY_EXT, settings.max_aniso);
 
-	gl::BindSampler(GLuint(tex_unit), sampler);
+	gl::BindSampler(tex_unit, sampler);
 }
 
 // -- UniformMapping --

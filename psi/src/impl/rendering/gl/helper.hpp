@@ -31,8 +31,6 @@
 
 
 namespace psi_gl {
-using Object = GLuint;
-
 class MeshBuffer {
 public:
 	explicit MeshBuffer(psi_rndr::MeshData const&);
@@ -41,9 +39,10 @@ public:
 	void draw(GLenum primitives);
 
 private:
-	Object m_VBO;
-	Object m_EBO;
-	Object m_VAO;
+	GLuint
+		m_VBO,
+		m_EBO,
+		m_VAO;
 
 	uint32_t m_index_count;
 };
@@ -66,6 +65,9 @@ public:
 	MultipleRenderTargetFramebuffer(MultipleRenderTargetFramebuffer const&) = delete;
 	MultipleRenderTargetFramebuffer& operator=(MultipleRenderTargetFramebuffer const&) = delete;
 
+	MultipleRenderTargetFramebuffer(MultipleRenderTargetFramebuffer&&) = delete;
+	MultipleRenderTargetFramebuffer& operator=(MultipleRenderTargetFramebuffer&&) = delete;
+
 	void bind();
 	void unbind();
 	GLuint texture_target_handle(size_t index);
@@ -76,16 +78,6 @@ private:
 	std::vector<GLuint> m_renderbuffers;
 };
 
-enum class TextureUnit {
-	POS_FRAME = 1,
-	NORM_FRAME = 2,
-	ALBEDO_FRAME = 3,
-	REFL_ROUGH_FRAME = 4,
-	NORM_MAP = 5,
-	ALBEDO = 6,
-	REFL_ROUGH = 7,
-};
-
 struct SamplerSettings {
 	GLint mag_filter;
 	GLint min_filter;
@@ -94,7 +86,7 @@ struct SamplerSettings {
 	GLfloat max_aniso;
 };
 
-void create_sampler_at_texture_unit(SamplerSettings, TextureUnit);
+void create_sampler_at_texture_unit(SamplerSettings, GLuint);
 
 // Vertex attributes passed into every mesh shader.
 enum class ShaderVertexAttrib {
@@ -132,11 +124,6 @@ HASHABLE_ENUM_CLASS_IN_NAMESPACE(UniformMapping, uint32_t, psi_gl) {
 HASHABLE_ENUM_CLASS_IN_NAMESPACE(UniformBlockMapping, uint32_t, psi_gl) {
 	LIGHT_DATA,
 };
-
-constexpr GLenum POS_ATTACHMENT = gl::COLOR_ATTACHMENT0;
-constexpr GLenum NORM_ATTACHMENT = gl::COLOR_ATTACHMENT1;
-constexpr GLenum ALBEDO_ATTACHMENT = gl::COLOR_ATTACHMENT2;
-constexpr GLenum RR_ATTACHMENT = gl::COLOR_ATTACHMENT3;
 
 // -- SHADERS --
 struct GLSLSource {
