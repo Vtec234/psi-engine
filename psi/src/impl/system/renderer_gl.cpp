@@ -91,6 +91,17 @@ public:
 
 	}
 
+	void register_input_handlers() {
+		m_serv.window_service().register_keyboard_input_callback(
+			[this] (psi_serv::KeyboardInput k, psi_serv::InputAction a) {
+				if (a == psi_serv::InputAction::PRESSED && k == psi_serv::KeyboardInput::B) {
+					m_serv.window_service().set_mouse_block(!m_mouse_blocked);
+					m_mouse_blocked = !m_mouse_blocked;
+				}
+			}
+		);
+	}
+
 	void gl_3d_state_setup() {
 		// enable face culling, counter-clockwise face is front
 		gl::Enable(gl::CULL_FACE);
@@ -105,21 +116,31 @@ public:
 		gl::DepthMask(true);
 		gl::DepthFunc(gl::LEQUAL);
 		gl::DepthRange(0.0f, 1.0f);
+
+		// clear color has to black for position and normal vector buffers
+		gl::ClearDepth(1.0f);
+		gl::ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
 	void on_scene_loaded(psi_scene::ISceneDirectAccess& acc) override {
+		register_input_handlers();
+
 		gl_3d_state_setup();
 		create_mrt_framebuffer();
 		create_tex_samplers();
 
 		std::hash<std::string> hash;
 		m_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
-		auto src = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_geometry"));
-		m_compiled_shaders[u8"deferred_gbuffer"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(src->resource()));
+		{
+			auto pass_first = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_geometry"));
+			m_compiled_shaders[u8"deferred_gbuffer"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_first->resource()));
+		}
 
 		m_serv.resource_service().request_resource(hash(u8"deferred_quad"), hash(u8"shader"), u8"glsl/quad");
-		auto src2 = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_quad"));
-		m_compiled_shaders[u8"deferred_quad"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(src2->resource()));
+		{
+			auto pass_second = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_quad"));
+			m_compiled_shaders[u8"deferred_quad"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_second->resource()));
+		}
 
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
@@ -179,60 +200,9 @@ public:
 		// -- END TEST --
 	}
 
-	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
-		// TODO handle changes in scene
-
-		auto width = m_serv.window_service().width();
-	 	auto height = m_serv.window_service().height();
-
-		if (m_frame_width != width || m_frame_height != height) {
-			m_frame_width = width;
-			m_frame_height = height;
-			create_mrt_framebuffer();
-			gl::Viewport(0, 0, width, height);
-		}
-
-		// TEST
-		{
-			auto mouse = m_serv.window_service().mouse_pos();
-			m_mouse_prev_x = m_mouse_x;
-			m_mouse_prev_y = m_mouse_y;
-			m_mouse_x = mouse.first;
-			m_mouse_y = mouse.second;
-
-			auto keys = m_serv.window_service().active_keyboard_inputs();
-			for (auto k : keys) {
-				if (k == psi_serv::KeyboardInput::W)
-					m_cam.translate_in_local({0.0f, 0.0f, -0.2f});
-				if (k == psi_serv::KeyboardInput::S)
-					m_cam.translate_in_local({0.0f, 0.0f, +0.2f});
-				if (k == psi_serv::KeyboardInput::A)
-					m_cam.translate_in_local({-0.2f, 0.0f, 0.0f});
-				if (k == psi_serv::KeyboardInput::D)
-					m_cam.translate_in_local({+0.2f, 0.0f, 0.0f});
-				if (k == psi_serv::KeyboardInput::Q)
-					m_cam.translate_in_local({0.0f, -0.2f, 0.0f});
-				if (k == psi_serv::KeyboardInput::E)
-					m_cam.translate_in_local({0.0f, +0.2f, 0.0f});
-			}
-			m_serv.window_service().register_keyboard_input_callback(
-				[this] (psi_serv::KeyboardInput k, psi_serv::InputAction a) {
-					if (a == psi_serv::InputAction::PRESSED && k == psi_serv::KeyboardInput::B) {
-						m_serv.window_service().set_mouse_block(!m_mouse_blocked);
-						m_mouse_blocked = !m_mouse_blocked;
-					}
-				}
-			);
-		}
-		if (m_mouse_blocked) {
-			m_cam.rotate_in_local({-1.0f, 0.0f, 0.0f}, (m_mouse_y - m_mouse_prev_y)/50.0f);
-			m_cam.rotate_in_world({0.0f, -1.0f, 0.0f}, (m_mouse_x - m_mouse_prev_x)/50.0f);
-		}
-
+	void deferred_gbuffer_pass(psi_scene::ISceneDirectAccess& acc) {
 		m_mrt_buf.bind();
 
-		gl::ClearDepth(1.0f);
-		gl::ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
 		m_clip.adjust_aspect_ratio(m_serv.window_service().aspect_ratio());
@@ -256,19 +226,9 @@ public:
 			}
 		}
 
-		psi_scene::ComponentEntity ent;
-		ent.transform = 0;
-		ent.model = 0;
-		ent.experiences_causality = true;
-
-		psi_scene::ComponentTransform tr;
-		tr.pos = {{ 0.0f, -10.0f, 0.0f }};
-		tr.scale = {{ 1.0f, 1.0f, 1.0f }};
-		tr.orientation = {{ 1.0f, 0.0f, 0.0f, 0.0f }};
-
 		Eigen::Matrix4f unity;
 		unity << 1, 0, 0, 0,
-				 0, 1, 0, 0,
+		         0, 1, 0, 0,
 				 0, 0, 1, 0,
 				 0, 0, 0, 1;
 		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, unity.data());
@@ -287,9 +247,10 @@ public:
 
 		m_uploaded_meshes.at(u8"meshes/cone_flat").draw(gl::TRIANGLES);
 
-
-		// -- SECOND PASS --
 		m_mrt_buf.unbind();
+	}
+
+	void deferred_lighting_pass() {
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
 		gl::UseProgram(m_compiled_shaders[u8"deferred_quad"].handle);
@@ -309,6 +270,55 @@ public:
 		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
 
 		gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+	}
+
+	void handle_input() {
+		auto mouse = m_serv.window_service().mouse_pos();
+		m_mouse_prev_x = m_mouse_x;
+		m_mouse_prev_y = m_mouse_y;
+		m_mouse_x = mouse.first;
+		m_mouse_y = mouse.second;
+
+		auto keys = m_serv.window_service().active_keyboard_inputs();
+		for (auto k : keys) {
+			if (k == psi_serv::KeyboardInput::W)
+				m_cam.translate_in_local({0.0f, 0.0f, -0.2f});
+			if (k == psi_serv::KeyboardInput::S)
+				m_cam.translate_in_local({0.0f, 0.0f, +0.2f});
+			if (k == psi_serv::KeyboardInput::A)
+				m_cam.translate_in_local({-0.2f, 0.0f, 0.0f});
+			if (k == psi_serv::KeyboardInput::D)
+				m_cam.translate_in_local({+0.2f, 0.0f, 0.0f});
+			if (k == psi_serv::KeyboardInput::Q)
+				m_cam.translate_in_local({0.0f, -0.2f, 0.0f});
+			if (k == psi_serv::KeyboardInput::E)
+				m_cam.translate_in_local({0.0f, +0.2f, 0.0f});
+		}
+
+		if (m_mouse_blocked) {
+			m_cam.rotate_in_local({-1.0f, 0.0f, 0.0f}, (m_mouse_y - m_mouse_prev_y)/50.0f);
+			m_cam.rotate_in_world({0.0f, -1.0f, 0.0f}, (m_mouse_x - m_mouse_prev_x)/50.0f);
+		}
+	}
+
+	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
+		// TODO handle changes in scene
+
+		auto width = m_serv.window_service().width();
+	 	auto height = m_serv.window_service().height();
+
+		if (m_frame_width != width || m_frame_height != height) {
+			m_frame_width = width;
+			m_frame_height = height;
+			create_mrt_framebuffer();
+			gl::Viewport(0, 0, width, height);
+		}
+
+		handle_input();
+
+		deferred_gbuffer_pass(acc);
+
+		deferred_lighting_pass();
 	}
 
 	void on_scene_save(psi_scene::ISceneDirectAccess&, void* /*replace_with_save_file*/) override {}
