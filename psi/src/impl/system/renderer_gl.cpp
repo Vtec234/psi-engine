@@ -36,9 +36,9 @@
 class SystemGLRenderer : public psi_sys::ISystem {
 public:
 	SystemGLRenderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv)
-		: m_tasks(tasks)
-		, m_serv(serv)
-		, m_mrt_buf(std::vector<psi_gl::FramebufferRenderTargetCreationInfo>(), 2, 2) {}
+		: _tasks(tasks)
+		, _serv(serv)
+		, _mrt_buf(std::vector<psi_gl::FramebufferRenderTargetCreationInfo>(), 2, 2) {}
 
 	uint64_t required_components() const override {
 		return psi_scene::component_type_entity_info.id | psi_scene::component_type_model_info.id | psi_scene::component_type_transform_info.id;
@@ -53,8 +53,8 @@ public:
 			{ false, false, gl::DEPTH_COMPONENT, },
 		};
 
-		auto const& win = m_serv.window_service();
-		new (&m_mrt_buf) psi_gl::MultipleRenderTargetFramebuffer(targets, win.width(), win.height());
+		auto const& win = _serv.window_service();
+		new (&_mrt_buf) psi_gl::MultipleRenderTargetFramebuffer(targets, win.width(), win.height());
 	}
 
 	enum class TextureUnit : GLuint {
@@ -92,11 +92,11 @@ public:
 	}
 
 	void register_input_handlers() {
-		m_serv.window_service().register_keyboard_input_callback(
+		_serv.window_service().register_keyboard_input_callback(
 			[this] (psi_serv::KeyboardInput k, psi_serv::InputAction a) {
 				if (a == psi_serv::InputAction::PRESSED && k == psi_serv::KeyboardInput::B) {
-					m_serv.window_service().set_mouse_block(!m_mouse_blocked);
-					m_mouse_blocked = !m_mouse_blocked;
+					_serv.window_service().set_mouse_block(!_mouse_blocked);
+					_mouse_blocked = !_mouse_blocked;
 				}
 			}
 		);
@@ -130,16 +130,16 @@ public:
 		create_tex_samplers();
 
 		std::hash<std::string> hash;
-		m_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
+		_serv.resource_service().request_resource(hash(u8"deferred_geometry"), hash(u8"shader"), u8"glsl/deferred_geometry");
 		{
-			auto pass_first = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_geometry"));
-			m_compiled_shaders[u8"deferred_gbuffer"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_first->resource()));
+			auto pass_first = *_serv.resource_service().retrieve_resource(hash(u8"deferred_geometry"));
+			_compiled_shaders[u8"deferred_gbuffer"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_first->resource()));
 		}
 
-		m_serv.resource_service().request_resource(hash(u8"deferred_quad"), hash(u8"shader"), u8"glsl/quad");
+		_serv.resource_service().request_resource(hash(u8"deferred_quad"), hash(u8"shader"), u8"glsl/quad");
 		{
-			auto pass_second = *m_serv.resource_service().retrieve_resource(hash(u8"deferred_quad"));
-			m_compiled_shaders[u8"deferred_quad"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_second->resource()));
+			auto pass_second = *_serv.resource_service().retrieve_resource(hash(u8"deferred_quad"));
+			_compiled_shaders[u8"deferred_quad"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_second->resource()));
 		}
 
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
@@ -153,20 +153,20 @@ public:
 					model->reflectiveness_roughness_tex.data()
 				}};
 
-				m_serv.resource_service().request_resource(hash(model->mesh_name.data()), hash(u8"mesh"), model->mesh_name.data());
+				_serv.resource_service().request_resource(hash(model->mesh_name.data()), hash(u8"mesh"), model->mesh_name.data());
 				for (auto const& tex : textures) {
-					m_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
+					_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
 				}
 
 				// upload mesh to GL
-				auto msh = *m_serv.resource_service().retrieve_resource(hash(model->mesh_name.data()));
+				auto msh = *_serv.resource_service().retrieve_resource(hash(model->mesh_name.data()));
 				psi_gl::MeshBuffer buf(boost::any_cast<psi_rndr::MeshData>(msh->resource()));
-				m_uploaded_meshes.emplace(model->mesh_name.data(), buf);
+				_uploaded_meshes.emplace(model->mesh_name.data(), buf);
 
 				// upload textures to GL
 				for (auto const& tex : textures) {
-					auto data = boost::any_cast<psi_rndr::TextureData>((*m_serv.resource_service().retrieve_resource(hash(tex)))->resource());
-					m_uploaded_textures[tex] = psi_gl::upload_tex(data);
+					auto data = boost::any_cast<psi_rndr::TextureData>((*_serv.resource_service().retrieve_resource(hash(tex)))->resource());
+					_uploaded_textures[tex] = psi_gl::upload_tex(data);
 				}
 			}
 		}
@@ -176,7 +176,7 @@ public:
 
 		//  -- TEST --
 		{
-			m_serv.resource_service().request_resource(hash(u8"meshes/cone_flat"), hash(u8"mesh"), u8"meshes/cone_flat");
+			_serv.resource_service().request_resource(hash(u8"meshes/cone_flat"), hash(u8"mesh"), u8"meshes/cone_flat");
 
 			std::array<std::string, 3> textures = {{
 				u8"textures/default",
@@ -185,29 +185,29 @@ public:
 			}};
 
 			for (auto const& tex : textures) {
-				m_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
+				_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
 			}
 
-			auto msh = *m_serv.resource_service().retrieve_resource(hash(u8"meshes/cone_flat"));
+			auto msh = *_serv.resource_service().retrieve_resource(hash(u8"meshes/cone_flat"));
 			psi_gl::MeshBuffer buf(boost::any_cast<psi_rndr::MeshData>(msh->resource()));
-			m_uploaded_meshes.emplace(u8"meshes/cone_flat", buf);
+			_uploaded_meshes.emplace(u8"meshes/cone_flat", buf);
 
 			for (auto const& tex : textures) {
-				auto data = boost::any_cast<psi_rndr::TextureData>((*m_serv.resource_service().retrieve_resource(hash(tex)))->resource());
-				m_uploaded_textures[tex] = psi_gl::upload_tex(data);
+				auto data = boost::any_cast<psi_rndr::TextureData>((*_serv.resource_service().retrieve_resource(hash(tex)))->resource());
+				_uploaded_textures[tex] = psi_gl::upload_tex(data);
 			}
 		}
 		// -- END TEST --
 	}
 
 	void deferred_gbuffer_pass(psi_scene::ISceneDirectAccess& acc) {
-		m_mrt_buf.bind();
+		_mrt_buf.bind();
 
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-		m_clip.adjust_aspect_ratio(m_serv.window_service().aspect_ratio());
+		_clip.adjust_aspect_ratio(_serv.window_service().aspect_ratio());
 
-		auto const& sh = m_compiled_shaders[u8"deferred_gbuffer"];
+		auto const& sh = _compiled_shaders[u8"deferred_gbuffer"];
 		gl::UseProgram(sh.handle);
 
 		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
@@ -232,84 +232,84 @@ public:
 				 0, 0, 1, 0,
 				 0, 0, 0, 1;
 		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, unity.data());
-		Eigen::Matrix4f local_to_clip = m_clip.to_clip() * m_cam.world_to_local();
+		Eigen::Matrix4f local_to_clip = _clip.to_clip() * _cam.world_to_local();
 		gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, local_to_clip.data());
 
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_ALBEDO));
-		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default"));
+		gl::BindTexture(gl::TEXTURE_2D, _uploaded_textures.at(u8"textures/default"));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
-		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default"));
+		gl::BindTexture(gl::TEXTURE_2D, _uploaded_textures.at(u8"textures/default"));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::TEX_NORMAL));
-		gl::BindTexture(gl::TEXTURE_2D, m_uploaded_textures.at(u8"textures/default_normal"));
+		gl::BindTexture(gl::TEXTURE_2D, _uploaded_textures.at(u8"textures/default_normal"));
 		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::ALBEDO_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_ALBEDO));
 		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::NORMAL_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_NORMAL));
 		gl::Uniform1i(sh.unifs.at(psi_gl::UniformMapping::REFLECTIVENESS_ROUGHNESS_TEXTURE_SAMPLER), GLint(TextureUnit::TEX_REFLECTIVENESS_ROUGHNESS));
 
-		m_uploaded_meshes.at(u8"meshes/cone_flat").draw(gl::TRIANGLES);
+		_uploaded_meshes.at(u8"meshes/cone_flat").draw(gl::TRIANGLES);
 
-		m_mrt_buf.unbind();
+		_mrt_buf.unbind();
 	}
 
 	void deferred_lighting_pass() {
 		gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-		gl::UseProgram(m_compiled_shaders[u8"deferred_quad"].handle);
+		gl::UseProgram(_compiled_shaders[u8"deferred_quad"].handle);
 
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_POSITION));
-		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(0));
+		gl::BindTexture(gl::TEXTURE_2D, _mrt_buf.texture_target_handle(0));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_NORMAL));
-		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(1));
+		gl::BindTexture(gl::TEXTURE_2D, _mrt_buf.texture_target_handle(1));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_ALBEDO));
-		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(2));
+		gl::BindTexture(gl::TEXTURE_2D, _mrt_buf.texture_target_handle(2));
 		gl::ActiveTexture(gl::TEXTURE0 + GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
-		gl::BindTexture(gl::TEXTURE_2D, m_mrt_buf.texture_target_handle(3));
+		gl::BindTexture(gl::TEXTURE_2D, _mrt_buf.texture_target_handle(3));
 
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_POSITION));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_NORMAL));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::ALBEDO_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_ALBEDO));
-		gl::Uniform1i(m_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
+		gl::Uniform1i(_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::POSITION_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_POSITION));
+		gl::Uniform1i(_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::NORMAL_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_NORMAL));
+		gl::Uniform1i(_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::ALBEDO_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_ALBEDO));
+		gl::Uniform1i(_compiled_shaders[u8"deferred_quad"].unifs.at(psi_gl::UniformMapping::REFL_ROUGH_FRAME_TEXTURE_SAMPLER), GLint(TextureUnit::MRT_REFLECTIVENESS_ROUGHNESS));
 
 		gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
 	}
 
 	void handle_input() {
-		auto mouse = m_serv.window_service().mouse_pos();
-		m_mouse_prev_x = m_mouse_x;
-		m_mouse_prev_y = m_mouse_y;
-		m_mouse_x = mouse.first;
-		m_mouse_y = mouse.second;
+		auto mouse = _serv.window_service().mouse_pos();
+		_mouse_prev_x = _mouse_x;
+		_mouse_prev_y = _mouse_y;
+		_mouse_x = mouse.first;
+		_mouse_y = mouse.second;
 
-		auto keys = m_serv.window_service().active_keyboard_inputs();
+		auto keys = _serv.window_service().active_keyboard_inputs();
 		for (auto k : keys) {
 			if (k == psi_serv::KeyboardInput::W)
-				m_cam.translate_in_local({0.0f, 0.0f, -0.2f});
+				_cam.translate_in_local({0.0f, 0.0f, -0.2f});
 			if (k == psi_serv::KeyboardInput::S)
-				m_cam.translate_in_local({0.0f, 0.0f, +0.2f});
+				_cam.translate_in_local({0.0f, 0.0f, +0.2f});
 			if (k == psi_serv::KeyboardInput::A)
-				m_cam.translate_in_local({-0.2f, 0.0f, 0.0f});
+				_cam.translate_in_local({-0.2f, 0.0f, 0.0f});
 			if (k == psi_serv::KeyboardInput::D)
-				m_cam.translate_in_local({+0.2f, 0.0f, 0.0f});
+				_cam.translate_in_local({+0.2f, 0.0f, 0.0f});
 			if (k == psi_serv::KeyboardInput::Q)
-				m_cam.translate_in_local({0.0f, -0.2f, 0.0f});
+				_cam.translate_in_local({0.0f, -0.2f, 0.0f});
 			if (k == psi_serv::KeyboardInput::E)
-				m_cam.translate_in_local({0.0f, +0.2f, 0.0f});
+				_cam.translate_in_local({0.0f, +0.2f, 0.0f});
 		}
 
-		if (m_mouse_blocked) {
-			m_cam.rotate_in_local({-1.0f, 0.0f, 0.0f}, (m_mouse_y - m_mouse_prev_y)/50.0f);
-			m_cam.rotate_in_world({0.0f, -1.0f, 0.0f}, (m_mouse_x - m_mouse_prev_x)/50.0f);
+		if (_mouse_blocked) {
+			_cam.rotate_in_local({-1.0f, 0.0f, 0.0f}, (_mouse_y - _mouse_prev_y)/50.0f);
+			_cam.rotate_in_world({0.0f, -1.0f, 0.0f}, (_mouse_x - _mouse_prev_x)/50.0f);
 		}
 	}
 
 	void on_scene_update(psi_scene::ISceneDirectAccess& acc) override {
 		// TODO handle changes in scene
 
-		auto width = m_serv.window_service().width();
-	 	auto height = m_serv.window_service().height();
+		auto width = _serv.window_service().width();
+	 	auto height = _serv.window_service().height();
 
-		if (m_frame_width != width || m_frame_height != height) {
-			m_frame_width = width;
-			m_frame_height = height;
+		if (_frame_width != width || _frame_height != height) {
+			_frame_width = width;
+			_frame_height = height;
 			create_mrt_framebuffer();
 			gl::Viewport(0, 0, width, height);
 		}
@@ -326,27 +326,27 @@ public:
 	void on_scene_shutdown(psi_scene::ISceneDirectAccess&) override {}
 
 private:
-	psi_thread::TaskManager const& m_tasks;
-	psi_serv::ServiceManager const& m_serv;
+	psi_thread::TaskManager const& _tasks;
+	psi_serv::ServiceManager const& _serv;
 
-	psi_rndr::IsometricTransform m_cam;
-	psi_rndr::ClipMatrix m_clip;
+	psi_rndr::IsometricTransform _cam;
+	psi_rndr::ClipMatrix _clip;
 
-	std::unordered_map<std::string, GLuint> m_uploaded_textures;
-	std::unordered_map<std::string, psi_gl::MeshBuffer> m_uploaded_meshes;
-	std::unordered_map<std::string, psi_gl::Shader> m_compiled_shaders;
+	std::unordered_map<std::string, GLuint> _uploaded_textures;
+	std::unordered_map<std::string, psi_gl::MeshBuffer> _uploaded_meshes;
+	std::unordered_map<std::string, psi_gl::Shader> _compiled_shaders;
 
-	psi_gl::MultipleRenderTargetFramebuffer m_mrt_buf;
+	psi_gl::MultipleRenderTargetFramebuffer _mrt_buf;
 
-	double m_mouse_x;
-	double m_mouse_y;
-	double m_mouse_prev_x;
-	double m_mouse_prev_y;
+	double _mouse_x;
+	double _mouse_y;
+	double _mouse_prev_x;
+	double _mouse_prev_y;
 
-	uint32_t m_frame_width;
-	uint32_t m_frame_height;
+	uint32_t _frame_width;
+	uint32_t _frame_height;
 
-	bool m_mouse_blocked = true;
+	bool _mouse_blocked = true;
 };
 
 std::unique_ptr<psi_sys::ISystem> psi_sys::start_gl_renderer(psi_thread::TaskManager const& tasks, psi_serv::ServiceManager const& serv) {

@@ -28,15 +28,15 @@
 
 // -- MeshBuffer --
 psi_gl::MeshBuffer::MeshBuffer(psi_rndr::MeshData const& mesh) {
-	gl::GenVertexArrays(1, &m_VAO);
-	gl::GenBuffers(1, &m_VBO);
-	gl::GenBuffers(1, &m_EBO);
+	gl::GenVertexArrays(1, &_vao);
+	gl::GenBuffers(1, &_vbo);
+	gl::GenBuffers(1, &_ebo);
 
 	// a m_vao stores the buffer bound to ELEMENT_ARRAY_BUFFER when that m_vao is active
 	// and the m_vao seems to also store the ARRAY_BUFFER when VertexAttribPointer and EnableVertexAttribArray are called
-	gl::BindVertexArray(m_VAO);
-	gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, m_EBO);
-	gl::BindBuffer(gl::ARRAY_BUFFER, m_VBO);
+	gl::BindVertexArray(_vao);
+	gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, _ebo);
+	gl::BindBuffer(gl::ARRAY_BUFFER, _vbo);
 
 	// describe how vertices are laid out in vert_memory
 	gl::VertexAttribPointer(GLuint(ShaderVertexAttrib::POS), 3, gl::FLOAT, false, psi_rndr::VertexData::FLOATS_PER_VERTEX * sizeof(float), nullptr);
@@ -86,7 +86,7 @@ psi_gl::MeshBuffer::MeshBuffer(psi_rndr::MeshData const& mesh) {
 		index_mem[i_ind] = mesh.indices[i_ind];
 	}
 
-	m_index_count = GLuint(mesh.indices.size());
+	_index_count = GLuint(mesh.indices.size());
 }
 
 psi_gl::MeshBuffer::~MeshBuffer() {
@@ -96,8 +96,8 @@ psi_gl::MeshBuffer::~MeshBuffer() {
 }
 
 void psi_gl::MeshBuffer::draw(GLenum primitives) {
-	gl::BindVertexArray(m_VAO);
-	gl::DrawElements(primitives, m_index_count, gl::UNSIGNED_INT, nullptr);
+	gl::BindVertexArray(_vao);
+	gl::DrawElements(primitives, _index_count, gl::UNSIGNED_INT, nullptr);
 }
 
 // -- MultipleRenderTargetFramebuffer --
@@ -134,8 +134,8 @@ static inline GLenum internal_format_to_type(GLenum internal) {
 }
 
 psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::vector<FramebufferRenderTargetCreationInfo> targets, uint32_t width, uint32_t height) {
-	gl::GenFramebuffers(1, &m_framebuffer);
-	gl::BindFramebuffer(gl::FRAMEBUFFER, m_framebuffer);
+	gl::GenFramebuffers(1, &_framebuffer);
+	gl::BindFramebuffer(gl::FRAMEBUFFER, _framebuffer);
 
 	GLint last_color = 0;
 	bool depth_attached = false;
@@ -147,7 +147,7 @@ psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::ve
 		if (info.texture_or_not_renderbuffer) {
 			gl::GenTextures(1, &handle);
 			gl::BindTexture(gl::TEXTURE_2D, handle);
-			gl::TexImage2D(gl::TEXTURE_2D, 0, info.internal_format, width, height, 0, internal_format_to_data_format(info.internal_format), internal_format_to_type(info.internal_format), 0);
+			gl::TexStorage2D(gl::TEXTURE_2D, 1, info.internal_format, width, height);
 
 			if (info.color_or_not_depth) {
 				gl::FramebufferTexture2D(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0 + last_color, gl::TEXTURE_2D, handle, 0);
@@ -160,7 +160,7 @@ psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::ve
 				depth_attached = true;
 			}
 
-			m_textures.push_back(handle);
+			_textures.push_back(handle);
 		}
 		else {
 			gl::GenRenderbuffers(1, &handle);
@@ -178,7 +178,7 @@ psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::ve
 				depth_attached = true;
 			}
 
-			m_renderbuffers.push_back(handle);
+			_renderbuffers.push_back(handle);
 		}
 	}
 
@@ -186,14 +186,14 @@ psi_gl::MultipleRenderTargetFramebuffer::MultipleRenderTargetFramebuffer(std::ve
 }
 
 psi_gl::MultipleRenderTargetFramebuffer::~MultipleRenderTargetFramebuffer() {
-	gl::DeleteTextures(m_textures.size(), m_textures.data());
-	gl::DeleteRenderbuffers(m_renderbuffers.size(), m_renderbuffers.data());
+	gl::DeleteTextures(_textures.size(), _textures.data());
+	gl::DeleteRenderbuffers(_renderbuffers.size(), _renderbuffers.data());
 
-	gl::DeleteFramebuffers(1, &m_framebuffer);
+	gl::DeleteFramebuffers(1, &_framebuffer);
 }
 
 void psi_gl::MultipleRenderTargetFramebuffer::bind() {
-	gl::BindFramebuffer(gl::FRAMEBUFFER, m_framebuffer);
+	gl::BindFramebuffer(gl::FRAMEBUFFER, _framebuffer);
 }
 
 void psi_gl::MultipleRenderTargetFramebuffer::unbind() {
@@ -201,8 +201,8 @@ void psi_gl::MultipleRenderTargetFramebuffer::unbind() {
 }
 
 GLuint psi_gl::MultipleRenderTargetFramebuffer::texture_target_handle(size_t index) {
-	ASSERT(index < m_textures.size());
-	return m_textures[index];
+	ASSERT(index < _textures.size());
+	return _textures[index];
 }
 
 // -- SAMPLERS --
@@ -213,8 +213,8 @@ void psi_gl::create_sampler_at_texture_unit(psi_gl::SamplerSettings settings, GL
 
 	gl::SamplerParameteri(sampler, gl::TEXTURE_MAG_FILTER, settings.mag_filter);
 	gl::SamplerParameteri(sampler, gl::TEXTURE_MIN_FILTER, settings.min_filter);
-	gl::SamplerParameteri(sampler, gl::TEXTURE_WRAP_S, settings.wrap_S);
-	gl::SamplerParameteri(sampler, gl::TEXTURE_WRAP_T, settings.wrap_T);
+	gl::SamplerParameteri(sampler, gl::TEXTURE_WRAP_S, settings.wrap_s);
+	gl::SamplerParameteri(sampler, gl::TEXTURE_WRAP_T, settings.wrap_t);
 	gl::SamplerParameterf(sampler, gl::TEXTURE_MAX_ANISOTROPY_EXT, settings.max_aniso);
 
 	gl::BindSampler(tex_unit, sampler);

@@ -44,7 +44,7 @@ public:
 	IWindowService& window_service();
 
 private:
-	std::unique_ptr<IResourceService> m_resource;
-	std::unique_ptr<IWindowService> m_window;
+	std::unique_ptr<IResourceService> _resource;
+	std::unique_ptr<IWindowService> _window;
 };
 } // namespace psi_serv

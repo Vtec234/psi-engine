@@ -61,7 +61,7 @@ void psi_log::init(fs::path const& work_dir, Level max) {
 	info("log") << "Initialized logger module.\n";
 }
 
-static inline std::string header(psi_log::Level lvl, std::string const& module, std::string const& part) {
+static inline std::string __header(psi_log::Level lvl, std::string const& module, std::string const& part) {
 	time_t time;
 	std::time(&time);
 	struct tm* info;
@@ -128,7 +128,7 @@ psi_util::Streamer psi_log::log(Level lvl, std::string const& module, std::strin
 
             STREAMS.unlock();
         });
-		stream << header(lvl, module, part);
+		stream << __header(lvl, module, part);
 		return stream;
 	}
 

@@ -59,7 +59,7 @@ public:
 	Streamer& operator<<(bool);
 
 private:
-	std::string m_buffer;
-	std::function<void(std::string const&)> m_out;
+	std::string _buffer;
+	std::function<void(std::string const&)> _out;
 };
 } // namespace psi_util

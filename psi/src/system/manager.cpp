@@ -48,6 +48,12 @@ private:
 		std::vector<size_t> to_remove;
 	};
 
+	// TODO store it like that ^
+	// or store same data as in static storage in SystemManager (non-system-accessible)
+	// + vector<ChangeEvent/ComponentChange/SceneChange/Whatever>?
+	// changes would be be harder to get an overall picture of
+	// but maybe easier to sync? have to build vector<Change> most likely anyway for syncing
+
 	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
 	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
 
@@ -241,10 +247,5 @@ void SystemManager::save_scene() {
 	// TODO SYNC CHANGES
 }
 
-void SystemManager::shut_scene(void*) {
-
-
-
-
-}
+void SystemManager::shut_scene(void*) {}
 } // namespace psi_sys

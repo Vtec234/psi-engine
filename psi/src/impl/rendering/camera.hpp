@@ -38,14 +38,14 @@ public:
 	Eigen::Matrix4f const& local_to_world();
 
 private:
-	Eigen::Vector3f m_position = {0.0f, 0.0f, 0.0f};
-	Eigen::Quaternionf m_orientation = {1.0f, 0.0f, 0.0f, 0.0f};
+	Eigen::Vector3f _position = {0.0f, 0.0f, 0.0f};
+	Eigen::Quaternionf _orientation = {1.0f, 0.0f, 0.0f, 0.0f};
 
-	Eigen::Matrix4f m_world_to_local;
-	bool m_world_to_local_is_dirty = true;
+	Eigen::Matrix4f _world_to_local;
+	bool _world_to_local_is_dirty = true;
 
-	Eigen::Matrix4f m_local_to_world;
-	bool m_local_to_world_is_dirty = true;
+	Eigen::Matrix4f _local_to_world;
+	bool _local_to_world_is_dirty = true;
 };
 
 class ClipMatrix {
@@ -59,7 +59,7 @@ public:
 	Eigen::Matrix4f const& to_clip();
 
 private:
-	Eigen::Matrix4f m_the_matrix;
-	float m_view_frustum_scale;
+	Eigen::Matrix4f _the_matrix;
+	float _view_frustum_scale;
 };
 } // namespace psi_rndr

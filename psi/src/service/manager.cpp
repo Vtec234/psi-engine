@@ -22,29 +22,29 @@
 
 
 psi_serv::ServiceManager::ServiceManager()
-	: m_resource()
-	, m_window() {}
+	: _resource()
+	, _window() {}
 
 void psi_serv::ServiceManager::set_resource_service(std::unique_ptr<IResourceService> ptr) {
-	m_resource = std::move(ptr);
+	_resource = std::move(ptr);
 }
 
 void psi_serv::ServiceManager::set_window_service(std::unique_ptr<IWindowService> ptr) {
-	m_window = std::move(ptr);
+	_window = std::move(ptr);
 }
 
 psi_serv::IResourceService const& psi_serv::ServiceManager::resource_service() const {
-	return *m_resource;
+	return *_resource;
 }
 
 psi_serv::IWindowService const& psi_serv::ServiceManager::window_service() const {
-	return *m_window;
+	return *_window;
 }
 
 psi_serv::IResourceService& psi_serv::ServiceManager::resource_service() {
-	return *m_resource;
+	return *_resource;
 }
 
 psi_serv::IWindowService& psi_serv::ServiceManager::window_service() {
-	return *m_window;
+	return *_window;
 }

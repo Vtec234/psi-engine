@@ -22,25 +22,25 @@
 
 
 void psi_rndr::IsometricTransform::translate_in_local(Eigen::Vector3f const& v) {
-	m_position += m_orientation._transformVector(v);
-	m_world_to_local_is_dirty = true;
-	m_local_to_world_is_dirty = true;
+	_position += _orientation._transformVector(v);
+	_world_to_local_is_dirty = true;
+	_local_to_world_is_dirty = true;
 }
 
 void psi_rndr::IsometricTransform::translate_in_world(Eigen::Vector3f const& v) {
-	m_position += v;
-	m_world_to_local_is_dirty = true;
-	m_local_to_world_is_dirty = true;
+	_position += v;
+	_world_to_local_is_dirty = true;
+	_local_to_world_is_dirty = true;
 }
 
 void psi_rndr::IsometricTransform::rotate_in_local(Eigen::Vector3f const& axis, float angle_deg) {
 	float half_angle_rad = angle_deg * float(M_PI) / 360.0f;
-	auto sax = m_orientation._transformVector(axis) * sinf(half_angle_rad);
+	auto sax = _orientation._transformVector(axis) * sinf(half_angle_rad);
 	auto c = cosf(half_angle_rad);
 	Eigen::Quaternionf rot(c, sax.x(), sax.y(), sax.z());
-	m_orientation = rot * m_orientation;
-	m_world_to_local_is_dirty = true;
-	m_local_to_world_is_dirty = true;
+	_orientation = rot * _orientation;
+	_world_to_local_is_dirty = true;
+	_local_to_world_is_dirty = true;
 }
 
 void psi_rndr::IsometricTransform::rotate_in_world(Eigen::Vector3f const& axis, float angle_deg) {
@@ -48,27 +48,27 @@ void psi_rndr::IsometricTransform::rotate_in_world(Eigen::Vector3f const& axis, 
 	auto sax = axis * sinf(half_angle_rad);
 	auto c = cosf(half_angle_rad);
 	Eigen::Quaternionf rot(c, sax.x(), sax.y(), sax.z());
-	m_orientation = rot * m_orientation;
-	m_world_to_local_is_dirty = true;
-	m_local_to_world_is_dirty = true;
+	_orientation = rot * _orientation;
+	_world_to_local_is_dirty = true;
+	_local_to_world_is_dirty = true;
 }
 
 Eigen::Vector3f const& psi_rndr::IsometricTransform::position() {
-	return m_position;
+	return _position;
 }
 
 Eigen::Matrix4f const& psi_rndr::IsometricTransform::world_to_local() {
-	if (m_world_to_local_is_dirty) {
-		m_world_to_local = local_to_world().inverse();
+	if (_world_to_local_is_dirty) {
+		_world_to_local = local_to_world().inverse();
 
-		m_world_to_local_is_dirty = false;
+		_world_to_local_is_dirty = false;
 	}
 
-	return m_world_to_local;
+	return _world_to_local;
 }
 
 Eigen::Matrix4f const& psi_rndr::IsometricTransform::local_to_world() {
-	if (m_local_to_world_is_dirty) {
+	if (_local_to_world_is_dirty) {
 		Eigen::Matrix4f translation;
 		translation << 1, 0, 0, 0,
 					   0, 1, 0, 0,
@@ -77,15 +77,15 @@ Eigen::Matrix4f const& psi_rndr::IsometricTransform::local_to_world() {
 
 		Eigen::Matrix4f rotation = translation;
 
-		translation.col(3) = Eigen::Vector4f(m_position.x(), m_position.y(), m_position.z(), 1.0f);
+		translation.col(3) = Eigen::Vector4f(_position.x(), _position.y(), _position.z(), 1.0f);
 
-		rotation.topLeftCorner<3,3>() = m_orientation.matrix();
-		m_local_to_world = translation * rotation;
+		rotation.topLeftCorner<3,3>() = _orientation.matrix();
+		_local_to_world = translation * rotation;
 
-		m_local_to_world_is_dirty = false;
+		_local_to_world_is_dirty = false;
 	}
 
-	return m_local_to_world;
+	return _local_to_world;
 }
 
 psi_rndr::ClipMatrix::ClipMatrix() {
@@ -94,24 +94,24 @@ psi_rndr::ClipMatrix::ClipMatrix() {
 		Z_FAR = 1000.0f,
 		DEFAULT_FOV_DEG = 75.0f;
 
-	m_view_frustum_scale = 1.0f / tan(DEFAULT_FOV_DEG * float(M_PI) / 360.0f);
+	_view_frustum_scale = 1.0f / tan(DEFAULT_FOV_DEG * float(M_PI) / 360.0f);
 
-	m_the_matrix << m_view_frustum_scale, 0,                    0,                                   0,
-					0,                    m_view_frustum_scale, 0,                                   0,
+	_the_matrix << _view_frustum_scale,   0,                    0,                                   0,
+					0,                    _view_frustum_scale,  0,                                   0,
 					0,                    0,                    (Z_FAR + Z_NEAR) / (Z_NEAR - Z_FAR), (2 * Z_FAR * Z_NEAR) / (Z_NEAR - Z_FAR),
 					0,                    0,                    -1.0f,                               1;
 }
 
 void psi_rndr::ClipMatrix::adjust_aspect_ratio(float ratio) {
-	m_the_matrix(0,0) = m_view_frustum_scale / ratio;
+	_the_matrix(0,0) = _view_frustum_scale / ratio;
 }
 
 void psi_rndr::ClipMatrix::adjust_fov(float fov) {
-	float ratio = m_view_frustum_scale / m_the_matrix(0,0);
-	m_view_frustum_scale = 1.0f / tan(fov * float(M_PI) / 360.0f);
-	m_the_matrix(0,0) = m_view_frustum_scale / ratio;
+	float ratio = _view_frustum_scale / _the_matrix(0,0);
+	_view_frustum_scale = 1.0f / tan(fov * float(M_PI) / 360.0f);
+	_the_matrix(0,0) = _view_frustum_scale / ratio;
 }
 
 Eigen::Matrix4f const& psi_rndr::ClipMatrix::to_clip() {
-	return m_the_matrix;
+	return _the_matrix;
 }

@@ -22,79 +22,79 @@
 
 
 psi_util::Streamer::Streamer(std::function<void(std::string const&)> out)
-    : m_out(out) {}
+    : _out(out) {}
 
 psi_util::Streamer::~Streamer() {
-    if (m_out)
-        m_out(m_buffer);
+    if (_out)
+        _out(_buffer);
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(std::string const& s) {
-	m_buffer += s;
+	_buffer += s;
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(char const* c) {
-	m_buffer += c;
+	_buffer += c;
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(uint8_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(uint16_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(uint32_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(uint64_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(int8_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(int16_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(int32_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(int64_t i) {
-	m_buffer += std::to_string(i);
+	_buffer += std::to_string(i);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(float f) {
-	m_buffer += std::to_string(f);
+	_buffer += std::to_string(f);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(double d) {
-	m_buffer += std::to_string(d);
+	_buffer += std::to_string(d);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(long double d) {
-	m_buffer += std::to_string(d);
+	_buffer += std::to_string(d);
 	return *this;
 }
 
 psi_util::Streamer& psi_util::Streamer::operator<<(bool b) {
-	m_buffer += std::to_string(b);
+	_buffer += std::to_string(b);
 	return *this;
 }

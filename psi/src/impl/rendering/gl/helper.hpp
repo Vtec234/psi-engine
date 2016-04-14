@@ -39,12 +39,11 @@ public:
 	void draw(GLenum primitives);
 
 private:
-	GLuint
-		m_VBO,
-		m_EBO,
-		m_VAO;
+	GLuint _vbo;
+	GLuint _ebo;
+	GLuint _vao;
 
-	uint32_t m_index_count;
+	uint32_t _index_count;
 };
 
 struct FramebufferRenderTargetCreationInfo {
@@ -73,16 +72,17 @@ public:
 	GLuint texture_target_handle(size_t index);
 
 private:
-	GLuint m_framebuffer;
-	std::vector<GLuint> m_textures;
-	std::vector<GLuint> m_renderbuffers;
+	GLuint              _framebuffer;
+	std::vector<GLuint> _textures;
+	std::vector<GLuint> _renderbuffers;
 };
 
 struct SamplerSettings {
 	GLint mag_filter;
 	GLint min_filter;
-	GLint wrap_S;
-	GLint wrap_T;
+	GLint wrap_s;
+	GLint wrap_t;
+
 	GLfloat max_aniso;
 };
 

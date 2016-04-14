@@ -36,89 +36,89 @@
 class GLWindowService : public psi_serv::IWindowService {
 public:
 	explicit GLWindowService(GLFWwindow* win)
-	: m_window(win)
-	, m_should_close(false) {}
+	: _window(win)
+	, _should_close(false) {}
 
 	virtual ~GLWindowService() {
-		glfwDestroyWindow(m_window);
+		glfwDestroyWindow(_window);
 		glfwTerminate();
 	}
 
 	void update_window() override {
-		if (m_block_mouse_changed) {
-			if (m_block_mouse)
-				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		if (_block_mouse_changed) {
+			if (_block_mouse)
+				glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			else
-				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-			m_block_mouse_changed = false;
+			_block_mouse_changed = false;
 		}
 
-		glfwSwapBuffers(m_window);
+		glfwSwapBuffers(_window);
 		glfwPollEvents();
 
-		m_should_close = glfwWindowShouldClose(m_window) || glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+		_should_close = glfwWindowShouldClose(_window) || glfwGetKey(_window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
 	}
 
 	void set_mouse_block(bool block) const override {
-		m_block_mouse = block;
-		m_block_mouse_changed = true;
+		_block_mouse = block;
+		_block_mouse_changed = true;
 	}
 
 	bool should_close() const override {
-		return m_should_close;
+		return _should_close;
 	}
 
 	uint32_t width() const override {
-		return m_framebuffer_width;
+		return _framebuffer_width;
 	}
 
 	uint32_t height() const override {
-		return m_framebuffer_height;
+		return _framebuffer_height;
 	}
 
 	double aspect_ratio() const override {
-		return m_aspect_ratio;
+		return _aspect_ratio;
 	}
 
 	void framebuffer_size_callback(int width, int height) {
-		m_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
-		m_framebuffer_width = width;
-		m_framebuffer_height = height;
+		_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
+		_framebuffer_width = width;
+		_framebuffer_height = height;
 	}
 
 	std::pair<double, double> mouse_pos() const override {
-		return std::make_pair(m_mouse_x.load(), m_mouse_y.load());
+		return std::make_pair(_mouse_x.load(), _mouse_y.load());
 	}
 
 	std::vector<psi_serv::KeyboardInput> active_keyboard_inputs() const override {
 		std::vector<psi_serv::KeyboardInput> vec;
-		m_keyboard_inputs_mut.lock();
-		if (!m_keyboard_inputs.empty())
-			vec.insert(vec.begin(), m_keyboard_inputs.begin(), m_keyboard_inputs.end());
-		m_keyboard_inputs_mut.unlock();
+		_keyboard_inputs_mut.lock();
+		if (!_keyboard_inputs.empty())
+			vec.insert(vec.begin(), _keyboard_inputs.begin(), _keyboard_inputs.end());
+		_keyboard_inputs_mut.unlock();
 		return vec;
 	}
 
 	std::vector<psi_serv::MouseButton> active_mouse_buttons() const override {
 		std::vector<psi_serv::MouseButton> vec;
-		m_mouse_buttons_mut.lock();
-		if (!m_mouse_buttons.empty())
-			vec.insert(vec.begin(), m_mouse_buttons.begin(), m_mouse_buttons.end());
-		m_mouse_buttons_mut.unlock();
+		_mouse_buttons_mut.lock();
+		if (!_mouse_buttons.empty())
+			vec.insert(vec.begin(), _mouse_buttons.begin(), _mouse_buttons.end());
+		_mouse_buttons_mut.unlock();
 		return vec;
 	}
 
 	void register_keyboard_input_callback(std::function<void(psi_serv::KeyboardInput, psi_serv::InputAction)> f) const override {
-		m_keyboard_input_callbacks.push_back(f);
+		_keyboard_input_callbacks.push_back(f);
 	}
 
 	void register_mouse_button_callback(std::function<void(psi_serv::MouseButton, psi_serv::InputAction)> f) const override {
-		m_mouse_button_callbacks.push_back(f);
+		_mouse_button_callbacks.push_back(f);
 	}
 
 	void register_mouse_move_callback(std::function<void(double, double)> f) const override {
-		m_mouse_move_callbacks.push_back(f);
+		_mouse_move_callbacks.push_back(f);
 	}
 
 	void key_pressed_callback(int key, int /*scancode*/, int action, int /*mods*/) {
@@ -159,18 +159,18 @@ public:
 
 		switch (action) {
 		case GLFW_PRESS:
-			m_keyboard_inputs_mut.lock();
-			m_keyboard_inputs.push_back(k);
-			m_keyboard_inputs_mut.unlock();
-			for (auto const& f : m_keyboard_input_callbacks)
+			_keyboard_inputs_mut.lock();
+			_keyboard_inputs.push_back(k);
+			_keyboard_inputs_mut.unlock();
+			for (auto const& f : _keyboard_input_callbacks)
 				f(k, psi_serv::InputAction::PRESSED);
 			break;
 
 		case GLFW_RELEASE:
-			m_keyboard_inputs_mut.lock();
-			m_keyboard_inputs.erase(std::find(m_keyboard_inputs.begin(), m_keyboard_inputs.end(), k));
-			m_keyboard_inputs_mut.unlock();
-			for (auto const& f : m_keyboard_input_callbacks)
+			_keyboard_inputs_mut.lock();
+			_keyboard_inputs.erase(std::find(_keyboard_inputs.begin(), _keyboard_inputs.end(), k));
+			_keyboard_inputs_mut.unlock();
+			for (auto const& f : _keyboard_input_callbacks)
 				f(k, psi_serv::InputAction::RELEASED);
 			break;
 
@@ -201,18 +201,18 @@ public:
 
 		switch (action) {
 		case GLFW_PRESS:
-			m_mouse_buttons_mut.lock();
-			m_mouse_buttons.push_back(b);
-			m_mouse_buttons_mut.unlock();
-			for (auto const& f : m_mouse_button_callbacks)
+			_mouse_buttons_mut.lock();
+			_mouse_buttons.push_back(b);
+			_mouse_buttons_mut.unlock();
+			for (auto const& f : _mouse_button_callbacks)
 				f(b, psi_serv::InputAction::PRESSED);
 			break;
 
 		case GLFW_RELEASE:
-			m_mouse_buttons_mut.lock();
-			m_mouse_buttons.erase(std::find(m_mouse_buttons.begin(), m_mouse_buttons.end(), b));
-			m_mouse_buttons_mut.unlock();
-			for (auto const& f : m_mouse_button_callbacks)
+			_mouse_buttons_mut.lock();
+			_mouse_buttons.erase(std::find(_mouse_buttons.begin(), _mouse_buttons.end(), b));
+			_mouse_buttons_mut.unlock();
+			for (auto const& f : _mouse_button_callbacks)
 				f(b, psi_serv::InputAction::RELEASED);
 			break;
 
@@ -222,35 +222,35 @@ public:
 	}
 
 	void cursor_moved_callback(double x, double y) {
-		m_mouse_x = x;
-		m_mouse_y = y;
+		_mouse_x = x;
+		_mouse_y = y;
 
-		for (auto const& f : m_mouse_move_callbacks)
+		for (auto const& f : _mouse_move_callbacks)
 			f(x, y);
 	}
 
 private:
-	GLFWwindow* m_window;
+	GLFWwindow* _window;
 
-	std::atomic<bool> m_should_close;
-	std::atomic<double> m_aspect_ratio;
-	std::atomic<int> m_framebuffer_width;
-	std::atomic<int> m_framebuffer_height;
+	std::atomic<bool> _should_close;
+	std::atomic<double> _aspect_ratio;
+	std::atomic<int> _framebuffer_width;
+	std::atomic<int> _framebuffer_height;
 
-	std::atomic<double> m_mouse_x;
-	std::atomic<double> m_mouse_y;
+	std::atomic<double> _mouse_x;
+	std::atomic<double> _mouse_y;
 
-	mutable std::atomic<bool> m_block_mouse;
-	mutable std::atomic<bool> m_block_mouse_changed;
+	mutable std::atomic<bool> _block_mouse;
+	mutable std::atomic<bool> _block_mouse_changed;
 
-	mutable std::mutex m_keyboard_inputs_mut;
-	mutable std::vector<psi_serv::KeyboardInput> m_keyboard_inputs;
-	mutable std::mutex m_mouse_buttons_mut;
-	mutable std::vector<psi_serv::MouseButton> m_mouse_buttons;
+	mutable std::mutex _keyboard_inputs_mut;
+	mutable std::vector<psi_serv::KeyboardInput> _keyboard_inputs;
+	mutable std::mutex _mouse_buttons_mut;
+	mutable std::vector<psi_serv::MouseButton> _mouse_buttons;
 
-	mutable tbb::concurrent_vector<std::function<void(psi_serv::KeyboardInput, psi_serv::InputAction)>> m_keyboard_input_callbacks;
-	mutable tbb::concurrent_vector<std::function<void(psi_serv::MouseButton, psi_serv::InputAction)>> m_mouse_button_callbacks;
-	mutable tbb::concurrent_vector<std::function<void(double, double)>> m_mouse_move_callbacks;
+	mutable tbb::concurrent_vector<std::function<void(psi_serv::KeyboardInput, psi_serv::InputAction)>> _keyboard_input_callbacks;
+	mutable tbb::concurrent_vector<std::function<void(psi_serv::MouseButton, psi_serv::InputAction)>> _mouse_button_callbacks;
+	mutable tbb::concurrent_vector<std::function<void(double, double)>> _mouse_move_callbacks;
 };
 
 static GLvoid APIENTRY gl_error_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei, const GLchar* message, const GLvoid*) {

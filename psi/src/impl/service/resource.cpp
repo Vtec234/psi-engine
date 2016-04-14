@@ -36,50 +36,50 @@
 class ResourceStorage {
 public:
 	ResourceStorage()
-		: m_is_loaded(false) {}
+		: _is_loaded(false) {}
 
 	/// ResourceStorage must be CopyConstructible for concurrent_hash_map.
 	ResourceStorage(ResourceStorage const& cpy)
-		: m_is_loaded(cpy.m_is_loaded) {
+		: _is_loaded(cpy._is_loaded) {
 		// make deep copy of resource if it was loaded into cpy
-		if (cpy.m_is_loaded) {
-			m_res = cpy.m_res;
+		if (cpy._is_loaded) {
+			_res = cpy._res;
 		}
 	}
 
 	~ResourceStorage() {
 		// simulate successful load and notify everybody we're done
 		// TODO won't this segfault if waiters check the Pred after m_is_loaded was destroyed?
-		std::unique_lock<std::mutex> lock(m_load_mut);
-		m_is_loaded = true;
+		std::unique_lock<std::mutex> lock(_load_mut);
+		_is_loaded = true;
 		lock.unlock();
-		m_load_cond.notify_all();
+		_load_cond.notify_all();
 	}
 
 	/// Store the result of a successful load operation in a newly initialized ResourceStorage.
 	void store_load(boost::any&& res) {
-		std::unique_lock<std::mutex> lock(m_load_mut);
+		std::unique_lock<std::mutex> lock(_load_mut);
 		// is_loaded must be false and m_res must be empty
-		ASSERT(!m_is_loaded);
-		m_res = std::move(res);
-		m_is_loaded = true;
+		ASSERT(!_is_loaded);
+		_res = std::move(res);
+		_is_loaded = true;
 		lock.unlock();
-		m_load_cond.notify_all();
+		_load_cond.notify_all();
 	}
 
 	/// Check if it is still loading == nothing was stored.
 	bool is_loaded() const {
-		std::unique_lock<std::mutex> lock(m_load_mut);
-		return m_is_loaded;
+		std::unique_lock<std::mutex> lock(_load_mut);
+		return _is_loaded;
 	}
 
 	/// Wait until something gets stored.
 	void wait_for_load() const {
-		std::unique_lock<std::mutex> lock(m_load_mut);
-		if (m_is_loaded)
+		std::unique_lock<std::mutex> lock(_load_mut);
+		if (_is_loaded)
 			return;
 
-		m_load_cond.wait(lock, [this]{ return m_is_loaded; });
+		_load_cond.wait(lock, [this]{ return _is_loaded; });
 	}
 
 	/// Retrieve the state of this resource.
@@ -93,15 +93,15 @@ public:
 	/// Returns the stored resource if it was loaded. Assertion fails otherwise.
 	boost::any const& resource() const {
 		ASSERT(is_loaded());
-		return m_res;
+		return _res;
 	}
 
 private:
-	bool m_is_loaded;
-	mutable std::mutex m_load_mut;
-	mutable std::condition_variable m_load_cond;
+	bool _is_loaded;
+	mutable std::mutex _load_mut;
+	mutable std::condition_variable _load_cond;
 
-	boost::any m_res;
+	boost::any _res;
 };
 
 typedef tbb::concurrent_hash_map<size_t, ResourceStorage>::accessor accessor;
@@ -110,31 +110,31 @@ typedef tbb::concurrent_hash_map<size_t, ResourceStorage>::const_accessor const_
 class ResourceLock : public psi_serv::IResourceLock {
 public:
 	explicit ResourceLock(std::unique_ptr<const_accessor>&& access)
-		: m_access(std::move(access)) {}
+		: _access(std::move(access)) {}
 
 	~ResourceLock() {}
 
 	boost::any const& resource() const {
-		return (*m_access)->second.resource();
+		return (*_access)->second.resource();
 	}
 
 private:
-	std::unique_ptr<const_accessor> m_access;
+	std::unique_ptr<const_accessor> _access;
 };
 
 class ResourceLoader : public psi_serv::IResourceService {
 public:
 	explicit ResourceLoader(psi_thread::TaskManager const& tasks)
-		: m_task_submitter(tasks) {}
+		: _task_submitter(tasks) {}
 
 	void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) override {
-		m_loaders[type] = loader;
+		_loaders[type] = loader;
 	}
 
 	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceType type, std::string location) const override {
-		ASSERT(m_loaders.count(type));
+		ASSERT(_loaders.count(type));
 
-		return request_resource(h, [&,this]()->boost::any{ return (m_loaders.at(type))(location); });
+		return request_resource(h, [&,this]()->boost::any{ return (_loaders.at(type))(location); });
 	}
 
 	psi_serv::ResourceState request_resource(
@@ -143,18 +143,18 @@ public:
 	) const override {
 		// check whether the resource is already in map
 		const_accessor access;
-		m_resources.find(access, h);
+		_resources.find(access, h);
 		if (!access.empty()) {
 			// access is pair<Key, Val>
 			return access->second.state();
 		}
 
 		// load resource from disk
-		m_task_submitter.submit_task(
+		_task_submitter.submit_task(
 			[&, h] {
 				// insert element (ResourceStorage() auto sets state as Loading)
 				accessor access;
-				m_resources.insert(access, h);
+				_resources.insert(access, h);
 				access.release();
 
 				// try to load the resource
@@ -165,11 +165,11 @@ public:
 				catch (std::exception const& e) {
 					psi_log::error("ResourceLoader") << "Loading resource " << h << " failed with error: " << e.what() << "\n";
 					// delete and quit if loading failed
-					m_resources.erase(h);
+					_resources.erase(h);
 					return;
 				}
 
-				m_resources.find(access, h);
+				_resources.find(access, h);
 				// I just inserted it but could be empty if the Loading element got deleted
 				if (access.empty())
 					return;
@@ -185,7 +185,7 @@ public:
 
 	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> retrieve_resource(ResourceHandle h) const override {
 		auto access = std::make_unique<const_accessor>();
-		m_resources.find(*access, h);
+		_resources.find(*access, h);
 		if (access->empty())
 			return boost::optional<std::unique_ptr<psi_serv::IResourceLock>>();
 
@@ -196,7 +196,7 @@ public:
 
 	psi_serv::ResourceState resource_state(ResourceHandle h) const override {
 		const_accessor access;
-		m_resources.find(access, h);
+		_resources.find(access, h);
 		if (access.empty())
 			return psi_serv::ResourceState::Unavailable;
 
@@ -209,10 +209,10 @@ public:
 	};
 
 private:
-	std::unordered_map<ResourceType, std::function<boost::any(std::string const&)>> m_loaders;
+	std::unordered_map<ResourceType, std::function<boost::any(std::string const&)>> _loaders;
 
-	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> m_resources;
-	psi_thread::TaskManager const& m_task_submitter;
+	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> _resources;
+	psi_thread::TaskManager const& _task_submitter;
 };
 
 std::unique_ptr<psi_serv::IResourceService> psi_serv::start_resource_loader(ResourceLoaderArgs args) {
