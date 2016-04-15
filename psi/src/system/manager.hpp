@@ -48,21 +48,19 @@ public:
 	void shut_scene(void*);
 
 private:
-	struct SystemStorage {
-		std::unique_ptr<ISystem> sys;
-		psi_scene::ComponentTypeBitset required_components;
-	};
+	psi_thread::TaskManager const& _tasks;
 
-	struct ComponentStorage {
+	struct ComponentTypeStorage {
 		std::vector<char> data;
 		size_t stored_n = 0;
+		psi_scene::ComponentTypeInfo info;
 	};
 
-	std::vector<SystemStorage> _systems;
+	std::unordered_map<psi_scene::ComponentType, ComponentTypeStorage> _scene;
 
-	std::unordered_map<psi_scene::ComponentType, ComponentStorage> _scene;
-	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> _types;
+	std::vector<std::unique_ptr<ISystem>> _systems;
 
-	psi_thread::TaskManager const& _tasks;
+	std::unique_ptr<psi_scene::ISceneDirectAccess> _construct_access(psi_scene::ComponentTypeBitset);
+	void _sync_with_access(psi_scene::ISceneDirectAccess&&);
 };
 } // namespace psi_sys

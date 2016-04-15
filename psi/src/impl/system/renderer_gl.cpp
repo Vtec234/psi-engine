@@ -46,11 +46,11 @@ public:
 
 	void create_mrt_framebuffer() {
 		std::vector<psi_gl::FramebufferRenderTargetCreationInfo> targets = {
-			{ true, true, gl::RGB16F, },
-			{ true, true, gl::RGB16F, },
-			{ true, true, gl::RGBA, },
-			{ true, true, gl::RGBA, },
-			{ false, false, gl::DEPTH_COMPONENT, },
+			{ true, true, gl::RGB32F, },
+			{ true, true, gl::RGB32F, },
+			{ true, true, gl::RGB16, },
+			{ true, true, gl::RGB16, },
+			{ false, false, gl::DEPTH_COMPONENT24, },
 		};
 
 		auto const& win = _serv.window_service();

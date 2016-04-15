@@ -30,52 +30,25 @@
 
 namespace psi_sys {
 class SystemManagerScene : public psi_scene::ISceneDirectAccess {
-friend class SystemManager;
-private:
-	struct ComponentStorage {
-		/// raw data of components already present
-		std::vector<char> data;
-		/// amount of stored components
-		size_t stored_n = 0;
-		/// indices of changed components
-		/// added component ids do not have to be here to be synced
-		std::vector<size_t> changed;
-		/// raw data of added components
-		std::vector<char> added;
-		/// amount of added components
-		size_t added_n = 0;
-		/// indices of components marked for removal
-		std::vector<size_t> to_remove;
-	};
-
-	// TODO store it like that ^
-	// or store same data a in static storage in SystemManager (non-system-accessible)
-	// + vector<ChangeEvent/ComponentChange/SceneChange/Whatever>?
-	// changes would be be harder to get an overall picture of
-	// but maybe easier to sync? have to build vector<Change> most likely anyway for syncing
-
-	std::unordered_map<psi_scene::ComponentType, ComponentStorage> _scene;
-	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> _types;
-
 public:
 	boost::any const read_component(psi_scene::ComponentType t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto const& store = _scene[t];
-		auto const& info = _types[t];
+		auto const& info = store.info;
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if (id < store.stored_n) {
-			return info.to_const_any_f(&store.data[id * info.size]);
+			return info.to_const_any_f(&store.data[id * store.info.size]);
 		}
 		else {
-			return info.to_const_any_f(&store.added[(id - store.stored_n) * info.size]);
+			return info.to_const_any_f(&store.added[(id - store.stored_n) * store.info.size]);
 		}
 	}
 
 	boost::any write_component(psi_scene::ComponentType t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
-		auto const& info = _types[t];
+		auto const& info = store.info;
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if (id < store.stored_n) {
@@ -94,11 +67,12 @@ public:
 	size_t add_component(psi_scene::ComponentType t, boost::any comp) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
+		auto const& info = store.info;
 
 		try {
-			auto p = _types[t].to_data_f(&comp);
+			auto data = info.to_data_f(&comp);
 			// TODO is this right?
-			store.added.insert(store.added.end(), p, p + _types[t].size);
+			store.added.insert(store.added.end(), data, data + info.size);
 			++store.added_n;
 		}
 		catch (std::exception const& e) {
@@ -135,117 +109,145 @@ public:
 	}
 
 	bool component_is_marked_remove(psi_scene::ComponentType t, size_t id) override {
+
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		return std::find(store.to_remove.begin(), store.to_remove.end(), id) != store.to_remove.end();
 	}
+
+	struct ComponentTypeStorage {
+		std::vector<char> data;
+		size_t stored_n = 0;
+
+		std::vector<char> added;
+		size_t added_n = 0;
+
+		std::vector<size_t> changed;
+		std::vector<size_t> to_remove;
+
+		psi_scene::ComponentTypeInfo info;
+	};
+	// TODO store it like that ^
+	// or store same data a in static storage in SystemManager (non-system-accessible)
+	// + vector<ChangeEvent/ComponentChange/SceneChange/Whatever>?
+	// changes would be be harder to get an overall picture of
+	// but maybe easier to sync? have to build vector<Change> most likely anyway for syncing
+
+	std::unordered_map<psi_scene::ComponentType, ComponentTypeStorage> _scene;
 };
 
 SystemManager::SystemManager(psi_thread::TaskManager const& tasks)
 	: _tasks(tasks) {}
 
 void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
-	auto req = sys->required_components();
-	_systems.push_back({std::move(sys), req});
+	_systems.push_back(std::move(sys));
 }
 
 void SystemManager::register_component_type(psi_scene::ComponentTypeInfo info) {
-	ASSERT(!bool(_scene.count(info.id)) && !bool(_types.count(info.id)));
+	ASSERT(!_scene.count(info.id));
 
-	_types[info.id] = info;
-	_scene[info.id];
+	_scene[info.id].info = info;
 }
 
 void SystemManager::load_scene(void*) {
 	// TODO load actual scene resource/file and init storage
 
-	std::vector<uint64_t> tasks;
+	std::vector<std::pair<uint64_t, std::unique_ptr<psi_scene::ISceneDirectAccess>>> tasks;
 	for (auto& sys : _systems) {
-		SystemManagerScene sc;
-		auto id = _tasks.submit_task([&, this]{
-			for (auto& info : _types) {
-				// component type is required by the system
-				if (sys.required_components & info.first) {
-					// copy type info
-					sc._types[info.first] = info.second;
-					// copy type data - long operation!
-					auto& comp = sc._scene[info.first];
-					comp.data = _scene[info.first].data;
-					comp.stored_n = _scene[info.first].stored_n;
-				}
-			}
+		tasks.emplace_back();
+		auto index = tasks.size() - 1;
 
-			sys.sys->on_scene_loaded(sc);
-		});
-		tasks.push_back(id);
+		tasks[index].first = _tasks.submit_task(
+			[&, this] {
+			tasks[index].second = _construct_access(sys->required_components());
+			sys->on_scene_loaded(*tasks[index].second);
+		}
+		);
 	}
+
 	// wait until all systems are done
-	for (auto task : tasks) {
-		_tasks.wait_for_task(task);
+	for (auto const& task : tasks) {
+		_tasks.wait_for_task(task.first);
 	}
 
-	// TODO SYNC CHANGES
+	for (auto& task : tasks) {
+		_sync_with_access(std::move(*task.second));
+	}
 }
 
 void SystemManager::update_scene() {
-	std::vector<uint64_t> tasks;
+	std::vector<std::pair<uint64_t, std::unique_ptr<psi_scene::ISceneDirectAccess>>> tasks;
 	for (auto& sys : _systems) {
-		SystemManagerScene sc;
-		auto id = _tasks.submit_task([&, this]{
-			for (auto& info : _types) {
-				// component type is required by the system
-				if (sys.required_components & info.first) {
-					// copy type info
-					sc._types[info.first] = info.second;
-					// copy type data - long operation!
-					auto& comp = sc._scene[info.first];
-					comp.data = _scene[info.first].data;
-					comp.stored_n = _scene[info.first].stored_n;
-				}
-			}
+		tasks.emplace_back();
+		auto index = tasks.size() - 1;
 
-			sys.sys->on_scene_update(sc);
-		});
-		tasks.push_back(id);
+		tasks[index].first = _tasks.submit_task(
+			[&, this] {
+			tasks[index].second = _construct_access(sys->required_components());
+			sys->on_scene_update(*tasks[index].second);
+		}
+		);
 	}
+
 	// wait until all systems are done
-	for (auto task : tasks) {
-		_tasks.wait_for_task(task);
+	for (auto const& task : tasks) {
+		_tasks.wait_for_task(task.first);
 	}
 
-	// TODO SYNC CHANGES
+	for (auto& task : tasks) {
+		_sync_with_access(std::move(*task.second));
+	}
 }
 
 void SystemManager::save_scene() {
-	std::vector<uint64_t> tasks;
+	std::vector<std::pair<uint64_t, std::unique_ptr<psi_scene::ISceneDirectAccess>>> tasks;
 	for (auto& sys : _systems) {
-		SystemManagerScene sc;
-		auto id = _tasks.submit_task([&, this]{
-			for (auto& info : _types) {
-				// component type is required by the system
-				if (sys.required_components & info.first) {
-					// copy type info
-					sc._types[info.first] = info.second;
-					// copy type data - long operation!
-					auto& comp = sc._scene[info.first];
-					comp.data = _scene[info.first].data;
-					comp.stored_n = _scene[info.first].stored_n;
-				}
-			}
+		tasks.emplace_back();
+		auto index = tasks.size() - 1;
 
-			sys.sys->on_scene_loaded(sc);
-		});
-		tasks.push_back(id);
+		tasks[index].first = _tasks.submit_task(
+			[&, this] {
+			tasks[index].second = _construct_access(sys->required_components());
+			sys->on_scene_save(*tasks[index].second, nullptr);
+		}
+		);
 	}
+
 	// wait until all systems are done
-	for (auto task : tasks) {
-		_tasks.wait_for_task(task);
+	for (auto const& task : tasks) {
+		_tasks.wait_for_task(task.first);
 	}
 
-	// TODO SYNC CHANGES
+	for (auto& task : tasks) {
+		_sync_with_access(std::move(*task.second));
+	}
 }
 
 void SystemManager::shut_scene(void*) {}
+
+std::unique_ptr<psi_scene::ISceneDirectAccess> SystemManager::_construct_access(psi_scene::ComponentTypeBitset types) {
+	SystemManagerScene* access = new SystemManagerScene;
+	for (auto const& map : _scene) {
+		auto const& store = map.second;
+		auto const& info = map.second.info;
+
+		if (types & info.id) {
+			auto& access_store = access->_scene[info.id];
+
+			// copy type information
+			access_store.info = info;
+			// copy type data - EXPENSIVE!
+			access_store.data= store.data;
+			access_store.stored_n = store.stored_n;
+		}
+	}
+
+	return std::unique_ptr<psi_scene::ISceneDirectAccess>(access);
+}
+
+void SystemManager::_sync_with_access(psi_scene::ISceneDirectAccess&& access) {
+	// TODO
+}
 } // namespace psi_sys
