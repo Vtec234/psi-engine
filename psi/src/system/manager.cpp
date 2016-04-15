@@ -49,19 +49,19 @@ private:
 	};
 
 	// TODO store it like that ^
-	// or store same data as in static storage in SystemManager (non-system-accessible)
+	// or store same data a in static storage in SystemManager (non-system-accessible)
 	// + vector<ChangeEvent/ComponentChange/SceneChange/Whatever>?
 	// changes would be be harder to get an overall picture of
 	// but maybe easier to sync? have to build vector<Change> most likely anyway for syncing
 
-	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
-	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
+	std::unordered_map<psi_scene::ComponentType, ComponentStorage> _scene;
+	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> _types;
 
 public:
 	boost::any const read_component(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(m_scene.count(t));
-		auto const& store = m_scene[t];
-		auto const& info = m_types[t];
+		ASSERT(_scene.count(t));
+		auto const& store = _scene[t];
+		auto const& info = _types[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if (id < store.stored_n) {
@@ -73,9 +73,9 @@ public:
 	}
 
 	boost::any write_component(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
-		auto const& info = m_types[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
+		auto const& info = _types[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if (id < store.stored_n) {
@@ -92,13 +92,13 @@ public:
 	}
 
 	size_t add_component(psi_scene::ComponentType t, boost::any comp) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
 
 		try {
-			auto p = m_types[t].to_data_f(&comp);
+			auto p = _types[t].to_data_f(&comp);
 			// TODO is this right?
-			store.added.insert(store.added.end(), p, p + m_types[t].size);
+			store.added.insert(store.added.end(), p, p + _types[t].size);
 			++store.added_n;
 		}
 		catch (std::exception const& e) {
@@ -109,15 +109,15 @@ public:
 	}
 
 	size_t component_count(psi_scene::ComponentType t) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
 
 		return store.stored_n + store.added_n;
 	}
 
 	void mark_component_remove(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if(std::find(store.to_remove.begin(), store.to_remove.end(), id) == store.to_remove.end())
@@ -125,8 +125,8 @@ public:
 	}
 
 	void cancel_component_removal(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		auto it = std::find(store.to_remove.begin(), store.to_remove.end(), id);
@@ -135,8 +135,8 @@ public:
 	}
 
 	bool component_is_marked_remove(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(m_scene.count(t));
-		auto& store = m_scene[t];
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		return std::find(store.to_remove.begin(), store.to_remove.end(), id) != store.to_remove.end();
@@ -144,36 +144,36 @@ public:
 };
 
 SystemManager::SystemManager(psi_thread::TaskManager const& tasks)
-	: m_tasks(tasks) {}
+	: _tasks(tasks) {}
 
 void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
 	auto req = sys->required_components();
-	m_systems.push_back({std::move(sys), req});
+	_systems.push_back({std::move(sys), req});
 }
 
 void SystemManager::register_component_type(psi_scene::ComponentTypeInfo info) {
-	ASSERT(!bool(m_scene.count(info.id)) && !bool(m_types.count(info.id)));
+	ASSERT(!bool(_scene.count(info.id)) && !bool(_types.count(info.id)));
 
-	m_types[info.id] = info;
-	m_scene[info.id];
+	_types[info.id] = info;
+	_scene[info.id];
 }
 
 void SystemManager::load_scene(void*) {
 	// TODO load actual scene resource/file and init storage
 
 	std::vector<uint64_t> tasks;
-	for (auto& sys : m_systems) {
+	for (auto& sys : _systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks.submit_task([&, this]{
-			for (auto& info : m_types) {
+		auto id = _tasks.submit_task([&, this]{
+			for (auto& info : _types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
 					// copy type info
-					sc.m_types[info.first] = info.second;
+					sc._types[info.first] = info.second;
 					// copy type data - long operation!
-					auto& comp = sc.m_scene[info.first];
-					comp.data = m_scene[info.first].data;
-					comp.stored_n = m_scene[info.first].stored_n;
+					auto& comp = sc._scene[info.first];
+					comp.data = _scene[info.first].data;
+					comp.stored_n = _scene[info.first].stored_n;
 				}
 			}
 
@@ -183,7 +183,7 @@ void SystemManager::load_scene(void*) {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks.wait_for_task(task);
+		_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES
@@ -191,18 +191,18 @@ void SystemManager::load_scene(void*) {
 
 void SystemManager::update_scene() {
 	std::vector<uint64_t> tasks;
-	for (auto& sys : m_systems) {
+	for (auto& sys : _systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks.submit_task([&, this]{
-			for (auto& info : m_types) {
+		auto id = _tasks.submit_task([&, this]{
+			for (auto& info : _types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
 					// copy type info
-					sc.m_types[info.first] = info.second;
+					sc._types[info.first] = info.second;
 					// copy type data - long operation!
-					auto& comp = sc.m_scene[info.first];
-					comp.data = m_scene[info.first].data;
-					comp.stored_n = m_scene[info.first].stored_n;
+					auto& comp = sc._scene[info.first];
+					comp.data = _scene[info.first].data;
+					comp.stored_n = _scene[info.first].stored_n;
 				}
 			}
 
@@ -212,7 +212,7 @@ void SystemManager::update_scene() {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks.wait_for_task(task);
+		_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES
@@ -220,18 +220,18 @@ void SystemManager::update_scene() {
 
 void SystemManager::save_scene() {
 	std::vector<uint64_t> tasks;
-	for (auto& sys : m_systems) {
+	for (auto& sys : _systems) {
 		SystemManagerScene sc;
-		auto id = m_tasks.submit_task([&, this]{
-			for (auto& info : m_types) {
+		auto id = _tasks.submit_task([&, this]{
+			for (auto& info : _types) {
 				// component type is required by the system
 				if (sys.required_components & info.first) {
 					// copy type info
-					sc.m_types[info.first] = info.second;
+					sc._types[info.first] = info.second;
 					// copy type data - long operation!
-					auto& comp = sc.m_scene[info.first];
-					comp.data = m_scene[info.first].data;
-					comp.stored_n = m_scene[info.first].stored_n;
+					auto& comp = sc._scene[info.first];
+					comp.data = _scene[info.first].data;
+					comp.stored_n = _scene[info.first].stored_n;
 				}
 			}
 
@@ -241,7 +241,7 @@ void SystemManager::save_scene() {
 	}
 	// wait until all systems are done
 	for (auto task : tasks) {
-		m_tasks.wait_for_task(task);
+		_tasks.wait_for_task(task);
 	}
 
 	// TODO SYNC CHANGES

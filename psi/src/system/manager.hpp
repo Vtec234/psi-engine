@@ -58,11 +58,11 @@ private:
 		size_t stored_n = 0;
 	};
 
-	std::vector<SystemStorage> m_systems;
+	std::vector<SystemStorage> _systems;
 
-	std::unordered_map<psi_scene::ComponentType, ComponentStorage> m_scene;
-	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> m_types;
+	std::unordered_map<psi_scene::ComponentType, ComponentStorage> _scene;
+	std::unordered_map<psi_scene::ComponentType, psi_scene::ComponentTypeInfo> _types;
 
-	psi_thread::TaskManager const& m_tasks;
+	psi_thread::TaskManager const& _tasks;
 };
 } // namespace psi_sys

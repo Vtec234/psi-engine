@@ -183,21 +183,21 @@ enum class MouseButton {
 /// A service which manages a window and all the related events.
 class IWindowService : psi_mark::ConstThreadsafe {
 public:
-    /// Polls window events and swaps frame buffers.
-    virtual void update_window() = 0;
+	/// Polls window events and swaps frame buffers.
+	virtual void update_window() = 0;
 
-    /// Tells window to either hide and grab the mouse or let it work normally/display/move.
-    virtual void set_mouse_block(bool) const = 0;
-    /// Returns true if the window should close.
-    virtual bool should_close() const = 0;
-    /// Returns the width of the framebuffer in pixels.
-    virtual uint32_t width() const = 0;
-    /// Returns the height of the framebuffer in pixels.
-    virtual uint32_t height() const = 0;
-    /// Returns width/height.
-    virtual double aspect_ratio() const = 0;
+	/// Tells window to either hide and grab the mouse or let it work normally/display/move.
+	virtual void set_mouse_block(bool) const = 0;
+	/// Returns true if the window should close.
+	virtual bool should_close() const = 0;
+	/// Returns the width of the framebuffer in pixels.
+	virtual uint32_t width() const = 0;
+	/// Returns the height of the framebuffer in pixels.
+	virtual uint32_t height() const = 0;
+	/// Returns width/height.
+	virtual double aspect_ratio() const = 0;
 
-	/// Returns the current coordinates of the mouse cursor as std::pair(x, y).
+	/// Returns the current coordinates of the mouse cursor.
 	virtual std::pair<double, double> mouse_pos() const = 0;
 
 	/// Returns the currently active keyboard inputs, that is the currently pressed keys.
@@ -206,13 +206,13 @@ public:
 	/// Returns the currently pressed mouse buttons.
 	virtual std::vector<MouseButton> active_mouse_buttons() const = 0;
 
-	/// Register a function to be called on each keyboard input, that is each key press.
+	/// Register a function to be called on each keyboard input, that is each key press. The function must be thread-safe.
 	virtual void register_keyboard_input_callback(std::function<void(KeyboardInput, InputAction)>) const = 0;
 
-	/// Register a function to be called on each mouse button press.
+	/// Register a function to be called on each mouse button press. The function must be thread-safe.
 	virtual void register_mouse_button_callback(std::function<void(MouseButton, InputAction)>) const = 0;
 
-	/// Register a function to be called on each mouse cursor movement.
+	/// Register a function to be called on each mouse cursor movement. The function must be thread-safe.
 	virtual void register_mouse_move_callback(std::function<void(double, double)>) const = 0;
 };
 } // namespace psi_serv

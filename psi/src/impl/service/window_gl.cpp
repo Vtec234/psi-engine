@@ -81,12 +81,6 @@ public:
 		return _aspect_ratio;
 	}
 
-	void framebuffer_size_callback(int width, int height) {
-		_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
-		_framebuffer_width = width;
-		_framebuffer_height = height;
-	}
-
 	std::pair<double, double> mouse_pos() const override {
 		return std::make_pair(_mouse_x.load(), _mouse_y.load());
 	}
@@ -119,6 +113,12 @@ public:
 
 	void register_mouse_move_callback(std::function<void(double, double)> f) const override {
 		_mouse_move_callbacks.push_back(f);
+	}
+
+	void framebuffer_size_callback(int width, int height) {
+		_aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
+		_framebuffer_width = width;
+		_framebuffer_height = height;
 	}
 
 	void key_pressed_callback(int key, int /*scancode*/, int action, int /*mods*/) {
