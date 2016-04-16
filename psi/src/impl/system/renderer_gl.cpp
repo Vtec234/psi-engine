@@ -40,8 +40,8 @@ public:
 		, _serv(serv)
 		, _mrt_buf(std::vector<psi_gl::FramebufferRenderTargetCreationInfo>(), 2, 2) {}
 
-	uint64_t required_components() const override {
-		return psi_scene::component_type_entity_info.id | psi_scene::component_type_model_info.id | psi_scene::component_type_transform_info.id;
+	psi_scene::ComponentTypeIdBitset required_components() const override {
+		return psi_scene::component_type_entity_info.type | psi_scene::component_type_model_info.type | psi_scene::component_type_transform_info.type;
 	}
 
 	void create_mrt_framebuffer() {
@@ -142,26 +142,26 @@ public:
 			_compiled_shaders[u8"deferred_quad"] = psi_gl::compile_glsl_source(boost::any_cast<psi_gl::GLSLSource>(pass_second->resource()));
 		}
 
-		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
+		size_t entity_count = acc.component_count<psi_scene::ComponentEntity>();
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
-			auto ent = boost::any_cast<psi_scene::ComponentEntity const*>(acc.read_component(psi_scene::component_type_entity_info.id, i_ent));
-			if (ent->model != psi_scene::NO_COMPONENT) {
-				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
+			auto ent = acc.read_component<psi_scene::ComponentEntity>(i_ent);
+			if (ent.model != psi_scene::NO_COMPONENT) {
+				auto model = acc.read_component<psi_scene::ComponentModel>(ent.model);
 				std::array<std::string, 3> textures = {{
-					model->albedo_tex.data(),
-					model->normal_tex.data(),
-					model->reflectiveness_roughness_tex.data()
+					model.albedo_tex.data(),
+					model.normal_tex.data(),
+					model.reflectiveness_roughness_tex.data()
 				}};
 
-				_serv.resource_service().request_resource(hash(model->mesh_name.data()), hash(u8"mesh"), model->mesh_name.data());
+				_serv.resource_service().request_resource(hash(model.mesh_name.data()), hash(u8"mesh"), model.mesh_name.data());
 				for (auto const& tex : textures) {
 					_serv.resource_service().request_resource(hash(tex), hash(u8"texture"), tex);
 				}
 
 				// upload mesh to GL
-				auto msh = *_serv.resource_service().retrieve_resource(hash(model->mesh_name.data()));
+				auto msh = *_serv.resource_service().retrieve_resource(hash(model.mesh_name.data()));
 				psi_gl::MeshBuffer buf(boost::any_cast<psi_rndr::MeshData>(msh->resource()));
-				_uploaded_meshes.emplace(model->mesh_name.data(), buf);
+				_uploaded_meshes.emplace(model.mesh_name.data(), buf);
 
 				// upload textures to GL
 				for (auto const& tex : textures) {
@@ -210,12 +210,12 @@ public:
 		auto const& sh = _compiled_shaders[u8"deferred_gbuffer"];
 		gl::UseProgram(sh.handle);
 
-		size_t entity_count = acc.component_count(psi_scene::component_type_entity_info.id);
+		size_t entity_count = acc.component_count<psi_scene::ComponentEntity>();
 		for (size_t i_ent = 0; i_ent < entity_count; ++i_ent) {
-			auto ent = boost::any_cast<psi_scene::ComponentEntity const*>(acc.read_component(psi_scene::component_type_entity_info.id, i_ent));
-			if (ent->model != psi_scene::NO_COMPONENT && ent->transform != psi_scene::NO_COMPONENT) {
-				auto model = boost::any_cast<psi_scene::ComponentModel const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->model));
-				auto trans = boost::any_cast<psi_scene::ComponentTransform const*>(acc.read_component(psi_scene::component_type_model_info.id, ent->transform));
+			auto ent = acc.read_component<psi_scene::ComponentEntity>(i_ent);
+			if (ent.model != psi_scene::NO_COMPONENT && ent.transform != psi_scene::NO_COMPONENT) {
+				auto model = acc.read_component<psi_scene::ComponentModel>(ent.model);
+				auto transform = acc.read_component<psi_scene::ComponentTransform>(ent.transform);
 
 				gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_WORLD), 1, false, nullptr);
 				gl::UniformMatrix4fv(sh.unifs.at(psi_gl::UniformMapping::LOCAL_TO_CLIP), 1, false, nullptr);

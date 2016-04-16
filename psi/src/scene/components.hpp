@@ -28,49 +28,56 @@
 
 
 namespace psi_scene {
-using ComponentType = uint64_t;
-/// TypeA | TypeB | TypeC
-using ComponentTypeBitset = uint64_t;
-using ComponentId = int64_t;
+using ComponentTypeId = uint64_t;
+using ComponentTypeIdBitset = uint64_t;
+
+using ComponentHandle = int64_t;
 
 /// A value indicating that no component is referenced.
-constexpr ComponentId NO_COMPONENT = -1;
+constexpr ComponentHandle NO_COMPONENT = -1;
 
-/// A component type info piece specifying that a component of this type represents some other component.
-struct ComponentRef {
-	/// The type of the referenced component.
-	ComponentType type;
-	/// The byte offset into the referencing component where the reference is contained.
-	size_t offset;
-	/// Whether a valid reference is necessary for the referencing component to exist.
-	bool necessary;
-};
+struct ComponentRelationship {
+	enum class Type {
+		/// This component owns the referenced component.
+		/// The referenced component can only exist if this component exists.
+		/// This component may also not own anything,
+		/// in which case the reference is set to NO_COMPONENT.
+		OWNERSHIP,
+		/// This component references another component.
+		/// This component can reference nothing,
+		/// in which case the reference is set to NO_COMPONENT.
+		/// The existence of this component or the referenced component
+		/// does not depend on this reference.
+		REFERENCE,
+		/// This component references another component,
+		/// which is necessary for this component to exist.
+		/// This reference may never be set to NO_COMPONENT.
+		NECESSARY_REFERENCE,
 // if necessary and referenced comp deleted, delete me
 // if not necessary and referenced comp deleted, zero the ref
+	};
+	Type type;
 
-/// A component type info piece specifying that a component of this type owns another component.
-struct ComponentOwnership {
-	/// The type of the owned component.
-	ComponentType type;
-	/// The byte offset into the owner where the owned component id is contained.
+	/// The type of the referenced component.
+	ComponentTypeId ref_comp_type;
+
+	/// The byte offset into this component where the reference is contained.
 	size_t offset;
 };
 
 /// Information about a component type.
 struct ComponentTypeInfo {
-	/// A unique power-of-2 id.
-	ComponentId id;
-	/// The byte size of a component of this type.
+	/// A unique power-of-2 type id.
+	ComponentTypeId type;
+	/// The size in bytes of a component of this type.
 	size_t size;
-	/// References to other components.
-	std::array<ComponentRef, 16> refs;
-	/// Ownership of other components.
-	std::array<ComponentOwnership, 16> owns;
-	/// A function which takes a byte array and returns a boost::any containing T*, where T is the component type.
+	/// Relationship to other components.
+	std::array<ComponentRelationship, 32> relations;
+	/// A function which takes a pointer to the raw data of the component
+	/// and returns a pointer to the component wrapped in boost::any.
 	std::function<boost::any(char*)> to_any_f;
-	/// A function which takes a const byte array and returns a boost::any const containing a T const*, where T is the component type.
-	std::function<boost::any const(char const*)> to_const_any_f;
-	/// A function which takes a boost::any and returns the contained data as a byte array if the contained type is T, where T is the component type.
-	std::function<char*(boost::any*)> to_data_f;
+	/// A function which takes a pointer to the component component wrapped in boost::any
+	/// and returns a pointer to the raw data of the component.
+	std::function<char*(boost::any)> to_raw_f;
 };
 } // namespace psi_scene

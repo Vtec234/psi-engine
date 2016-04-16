@@ -56,11 +56,11 @@ private:
 		psi_scene::ComponentTypeInfo info;
 	};
 
-	std::unordered_map<psi_scene::ComponentType, ComponentTypeStorage> _scene;
+	std::unordered_map<psi_scene::ComponentTypeId, ComponentTypeStorage> _scene;
 
 	std::vector<std::unique_ptr<ISystem>> _systems;
 
-	std::unique_ptr<psi_scene::ISceneDirectAccess> _construct_access(psi_scene::ComponentTypeBitset);
-	void _sync_with_access(psi_scene::ISceneDirectAccess&&);
+	std::unique_ptr<psi_scene::ISceneDirectAccess> _construct_access(psi_scene::ComponentTypeIdBitset);
+	void _sync_with_accesses(std::vector<std::unique_ptr<psi_scene::ISceneDirectAccess>>&);
 };
 } // namespace psi_sys

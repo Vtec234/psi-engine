@@ -33,7 +33,7 @@ namespace psi_sys {
 class ISystem : psi_mark::NonThreadsafe {
 public:
 	/// Bitmask of SceneComponentType. Only the required types will be provided to the system.
-	virtual psi_scene::ComponentTypeBitset required_components() const = 0;
+	virtual psi_scene::ComponentTypeIdBitset required_components() const = 0;
 
 	/// Functions called at various moments of a scene's lifetime.
 	virtual void on_scene_loaded(psi_scene::ISceneDirectAccess&) = 0;

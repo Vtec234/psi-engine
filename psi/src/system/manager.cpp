@@ -22,6 +22,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <set>
 
 #include <boost/optional.hpp>
 
@@ -30,49 +31,44 @@
 
 namespace psi_sys {
 class SystemManagerScene : public psi_scene::ISceneDirectAccess {
-public:
-	boost::any const read_component(psi_scene::ComponentType t, size_t id) override {
-		ASSERT(_scene.count(t));
-		auto const& store = _scene[t];
-		auto const& info = store.info;
-		ASSERT(id < (store.stored_n + store.added_n));
-
-		if (id < store.stored_n) {
-			return info.to_const_any_f(&store.data[id * store.info.size]);
-		}
-		else {
-			return info.to_const_any_f(&store.added[(id - store.stored_n) * store.info.size]);
-		}
-	}
-
-	boost::any write_component(psi_scene::ComponentType t, size_t id) override {
+protected:
+	boost::any _component(psi_scene::ComponentTypeId t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		auto const& info = store.info;
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		if (id < store.stored_n) {
-			// mark as changed
-			if (std::find(store.changed.begin(), store.changed.end(), id) == store.changed.end())
-				store.changed.push_back(id);
-
-			return info.to_any_f(&store.data[id * info.size]);
+			return info.to_any_f(&store.data[id * store.info.size]);
 		}
 		else {
-			// no need to mark as changed, since added components sync anyway
-			return info.to_any_f(&store.added[(id - store.stored_n) * info.size]);
+			return info.to_any_f(&store.added[(id - store.stored_n) * store.info.size]);
 		}
 	}
 
-	size_t add_component(psi_scene::ComponentType t, boost::any comp) override {
+	void _mark_component_changed(psi_scene::ComponentTypeId t, size_t id) override {
+		ASSERT(_scene.count(t));
+		auto& store = _scene[t];
+		ASSERT(id < (store.stored_n + store.stored_n));
+
+		if (id >= store.stored_n) {
+			return;
+		}
+
+		if (std::find(store.changed.begin(), store.changed.end(), id) == store.changed.end()) {
+			store.changed.push_back(id);
+		}
+	}
+
+	size_t _add_component(psi_scene::ComponentTypeId t, boost::any comp) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		auto const& info = store.info;
 
 		try {
-			auto data = info.to_data_f(&comp);
-			// TODO is this right?
-			store.added.insert(store.added.end(), data, data + info.size);
+			size_t len = info.size;
+			char* data = info.to_raw_f(comp);
+			store.added.insert(store.added.end(), data, data + len);
 			++store.added_n;
 		}
 		catch (std::exception const& e) {
@@ -82,34 +78,35 @@ public:
 		return store.stored_n + store.added_n - 1;
 	}
 
-	size_t component_count(psi_scene::ComponentType t) override {
+	size_t _component_count(psi_scene::ComponentTypeId t) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 
 		return store.stored_n + store.added_n;
 	}
 
-	void mark_component_remove(psi_scene::ComponentType t, size_t id) override {
+	void _mark_component_remove(psi_scene::ComponentTypeId t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
-		if(std::find(store.to_remove.begin(), store.to_remove.end(), id) == store.to_remove.end())
+		if(std::find(store.to_remove.begin(), store.to_remove.end(), id) == store.to_remove.end()) {
 			store.to_remove.push_back(id);
+		}
 	}
 
-	void cancel_component_removal(psi_scene::ComponentType t, size_t id) override {
+	void _cancel_component_removal(psi_scene::ComponentTypeId t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
 
 		auto it = std::find(store.to_remove.begin(), store.to_remove.end(), id);
-		if (it != store.to_remove.end())
+		if (it != store.to_remove.end()) {
 			store.to_remove.erase(it);
+		}
 	}
 
-	bool component_is_marked_remove(psi_scene::ComponentType t, size_t id) override {
-
+	bool _component_is_marked_remove(psi_scene::ComponentTypeId t, size_t id) override {
 		ASSERT(_scene.count(t));
 		auto& store = _scene[t];
 		ASSERT(id < (store.stored_n + store.added_n));
@@ -117,6 +114,7 @@ public:
 		return std::find(store.to_remove.begin(), store.to_remove.end(), id) != store.to_remove.end();
 	}
 
+public:
 	struct ComponentTypeStorage {
 		std::vector<char> data;
 		size_t stored_n = 0;
@@ -135,7 +133,7 @@ public:
 	// changes would be be harder to get an overall picture of
 	// but maybe easier to sync? have to build vector<Change> most likely anyway for syncing
 
-	std::unordered_map<psi_scene::ComponentType, ComponentTypeStorage> _scene;
+	std::unordered_map<psi_scene::ComponentTypeId, ComponentTypeStorage> _scene;
 };
 
 SystemManager::SystemManager(psi_thread::TaskManager const& tasks)
@@ -146,9 +144,9 @@ void SystemManager::register_system(std::unique_ptr<ISystem> sys) {
 }
 
 void SystemManager::register_component_type(psi_scene::ComponentTypeInfo info) {
-	ASSERT(!_scene.count(info.id));
+	ASSERT(!_scene.count(info.type));
 
-	_scene[info.id].info = info;
+	_scene[info.type].info = info;
 }
 
 void SystemManager::load_scene(void*) {
@@ -168,13 +166,13 @@ void SystemManager::load_scene(void*) {
 	}
 
 	// wait until all systems are done
-	for (auto const& task : tasks) {
-		_tasks.wait_for_task(task.first);
+	std::vector<std::unique_ptr<psi_scene::ISceneDirectAccess>> accesses;
+	for (auto& t : tasks) {
+		_tasks.wait_for_task(t.first);
+		accesses.push_back(std::move(t.second));
 	}
 
-	for (auto& task : tasks) {
-		_sync_with_access(std::move(*task.second));
-	}
+	_sync_with_accesses(accesses);
 }
 
 void SystemManager::update_scene() {
@@ -192,13 +190,13 @@ void SystemManager::update_scene() {
 	}
 
 	// wait until all systems are done
-	for (auto const& task : tasks) {
-		_tasks.wait_for_task(task.first);
+	std::vector<std::unique_ptr<psi_scene::ISceneDirectAccess>> accesses;
+	for (auto& t : tasks) {
+		_tasks.wait_for_task(t.first);
+		accesses.push_back(std::move(t.second));
 	}
 
-	for (auto& task : tasks) {
-		_sync_with_access(std::move(*task.second));
-	}
+	_sync_with_accesses(accesses);
 }
 
 void SystemManager::save_scene() {
@@ -216,25 +214,25 @@ void SystemManager::save_scene() {
 	}
 
 	// wait until all systems are done
-	for (auto const& task : tasks) {
-		_tasks.wait_for_task(task.first);
+	std::vector<std::unique_ptr<psi_scene::ISceneDirectAccess>> accesses;
+	for (auto& t : tasks) {
+		_tasks.wait_for_task(t.first);
+		accesses.push_back(std::move(t.second));
 	}
 
-	for (auto& task : tasks) {
-		_sync_with_access(std::move(*task.second));
-	}
+	_sync_with_accesses(accesses);
 }
 
 void SystemManager::shut_scene(void*) {}
 
-std::unique_ptr<psi_scene::ISceneDirectAccess> SystemManager::_construct_access(psi_scene::ComponentTypeBitset types) {
+std::unique_ptr<psi_scene::ISceneDirectAccess> SystemManager::_construct_access(psi_scene::ComponentTypeIdBitset types) {
 	SystemManagerScene* access = new SystemManagerScene;
 	for (auto const& map : _scene) {
 		auto const& store = map.second;
 		auto const& info = map.second.info;
 
-		if (types & info.id) {
-			auto& access_store = access->_scene[info.id];
+		if (types & info.type) {
+			auto& access_store = access->_scene[info.type];
 
 			// copy type information
 			access_store.info = info;
@@ -247,7 +245,78 @@ std::unique_ptr<psi_scene::ISceneDirectAccess> SystemManager::_construct_access(
 	return std::unique_ptr<psi_scene::ISceneDirectAccess>(access);
 }
 
-void SystemManager::_sync_with_access(psi_scene::ISceneDirectAccess&& access) {
-	// TODO
+void SystemManager::_sync_with_accesses(std::vector<std::unique_ptr<psi_scene::ISceneDirectAccess>>& accesses) {
+	// one sync operation per component type
+	for (auto const& type : _scene) {
+		// make a list of all storages of accesses which requested the given type
+		std::vector<SystemManagerScene::ComponentTypeStorage*> storage;
+		for (auto& a : accesses) {
+			SystemManagerScene* sc = static_cast<SystemManagerScene*>(a.get());
+			if (sc->_scene.count(type.first)) {
+				storage.push_back(&sc->_scene[type.first]);
+			}
+		}
+
+		// aggregate indices of components which are to be removed
+		std::set<size_t> to_remove;
+		for (auto s : storage) {
+			to_remove.insert(s->to_remove.begin(), s->to_remove.end());
+		}
+
+
+		// aggregate indices of components which underwent changes
+		std::vector<size_t> changed;
+		for (auto s : storage) {
+			for (size_t id : s->changed) {
+				// discard changes to components which will be removed
+				if (std::find(to_remove.cbegin(), to_remove.cend(), id) != to_remove.cend())
+					continue;
+
+				if (std::find(changed.cbegin(), changed.cend(), id) != changed.cend()) {
+					// TODO resolve conflicts
+					// have to keep track of which system did which change to make proper resolutions
+					// for now only merge first change
+					continue;
+				}
+				else {
+					changed.push_back(id);
+
+					size_t type_size = type.second.info.size;
+					char* data = &s->data[id];
+
+
+					// do different things based on what kind of change happened
+					// first handle owning references
+					//
+					// normal refs need only be handled in removal
+
+
+					// TODO sync change here
+				}
+			}
+		}
+
+
+
+		// syncing additions is easiest
+		// just copy data
+		// and for types which hold references update the references
+		for (auto s : storage) {
+			for (size_t i_a = 0; i_a < s->added_n; ++i_a) {
+				size_t len = type.second.info.size;
+				char* data = &s->added[i_a * len];
+
+				// have to update refs!
+
+
+
+			}
+
+
+
+
+
+		}
+	}
 }
 } // namespace psi_sys

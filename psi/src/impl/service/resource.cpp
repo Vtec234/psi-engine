@@ -85,9 +85,9 @@ public:
 	/// Retrieve the state of this resource.
 	psi_serv::ResourceState state() const {
 		if (is_loaded())
-			return psi_serv::ResourceState::Available;
+			return psi_serv::ResourceState::AVAILABLE;
 		else
-			return psi_serv::ResourceState::Loading;
+			return psi_serv::ResourceState::LOADING;
 	}
 
 	/// Returns the stored resource if it was loaded. Assertion fails otherwise.
@@ -114,7 +114,7 @@ public:
 
 	~ResourceLock() {}
 
-	boost::any const& resource() const {
+	boost::any const& resource() override {
 		return (*_access)->second.resource();
 	}
 
@@ -127,14 +127,14 @@ public:
 	explicit ResourceLoader(psi_thread::TaskManager const& tasks)
 		: _task_submitter(tasks) {}
 
-	void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) override {
-		_loaders[type] = loader;
+	void register_loader(ResourceLoaderId id, std::function<boost::any(std::string const&)> loader) override {
+		_loaders[id] = loader;
 	}
 
-	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceType type, std::string location) const override {
-		ASSERT(_loaders.count(type));
+	psi_serv::ResourceState request_resource(ResourceHandle h, ResourceLoaderId id, std::string location) const override {
+		ASSERT(_loaders.count(id));
 
-		return request_resource(h, [&,this]()->boost::any{ return (_loaders.at(type))(location); });
+		return request_resource(h, [&,this]()->boost::any{ return (_loaders.at(id))(location); });
 	}
 
 	psi_serv::ResourceState request_resource(
@@ -180,7 +180,7 @@ public:
 		);
 
 		// happens concurrently with the task submitted to m_task_submitter
-		return psi_serv::ResourceState::Loading;
+		return psi_serv::ResourceState::LOADING;
 	}
 
 	boost::optional<std::unique_ptr<psi_serv::IResourceLock>> retrieve_resource(ResourceHandle h) const override {
@@ -198,18 +198,18 @@ public:
 		const_accessor access;
 		_resources.find(access, h);
 		if (access.empty())
-			return psi_serv::ResourceState::Unavailable;
+			return psi_serv::ResourceState::UNAVAILABLE;
 
 		return access->second.state();
 	}
 
 	// TODO this method
 	psi_serv::ResourceState free_resource(ResourceHandle h) const override {
-		return psi_serv::ResourceState::Unavailable;
+		return psi_serv::ResourceState::UNAVAILABLE;
 	};
 
 private:
-	std::unordered_map<ResourceType, std::function<boost::any(std::string const&)>> _loaders;
+	std::unordered_map<ResourceLoaderId, std::function<boost::any(std::string const&)>> _loaders;
 
 	mutable tbb::concurrent_hash_map<size_t, ResourceStorage> _resources;
 	psi_thread::TaskManager const& _task_submitter;

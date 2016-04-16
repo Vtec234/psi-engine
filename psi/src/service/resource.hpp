@@ -34,58 +34,65 @@
 namespace psi_serv {
 /// State that a resource in ResourceService can be in.
 enum class ResourceState {
-    /// Resource is not loading or in storage.
-    Unavailable,
-    /// Resource is currently loading from the hard disk/other medium.
-    Loading,
-    /// Resource is in storage and can be used.
-    Available,
+	/// Resource is not loading or in storage.
+	UNAVAILABLE,
+	/// Resource is currently loading from the hard disk/other medium.
+	LOADING,
+	/// Resource is in storage and can be used.
+	AVAILABLE,
 };
 
 /// An abstract class representing a read-lock on a resource.
 /// Destroying this object releases the lock and allows potential modifications to the resource.
 class IResourceLock : psi_mark::NonThreadsafe {
 public:
-    virtual ~IResourceLock() {};
+	virtual ~IResourceLock() {};
 
-    virtual boost::any const& resource() const = 0;
+	virtual boost::any const& resource() = 0;
 };
 
 /// A thread-safe service which loads and manages resources.
 class IResourceService : psi_mark::ConstThreadsafe {
 public:
+	using ResourceLoaderId = uint64_t;
+
+	/// Resource handles are global to the resource service, not per-resource-type.
 	using ResourceHandle = size_t;
-	using ResourceType = size_t;
 
-	/// Registers a loader function which will be used to load all resources of the specified type.
-	/// Replaces previous loader if type was already registered.
-	/// @param[in] type   resource type
+	/// Registers a loader function which can then be used to load resources.
+	/// Replaces previous loader if this id was already registered.
+	/// @param[in] id     resource loader id
 	/// @param[in] loader a thread-safe loader function
-	virtual void register_loader(ResourceType type, std::function<boost::any(std::string const&)> loader) = 0;
+	virtual void register_loader(ResourceLoaderId id, std::function<boost::any(std::string const&)> loader) = 0;
 
-	/// Requests a resource of the specified type to be loaded.
+	/// Requests a resource to be loaded with the specified loader.
 	/// @param[in] h     resource storage handle to load into
-	/// @param[in] type  resource type
-	/// @param[in] param UTF-32 string parameter passed to the loader
+	/// @param[in] id    resource loader id
+	/// @param[in] param UTF-8 string parameter passed to the loader
 	/// @warning Assertion failure on unregistered type.
-	virtual ResourceState request_resource(ResourceHandle h, ResourceType, std::string param) const = 0;
+	virtual ResourceState request_resource(ResourceHandle h, ResourceLoaderId id, std::string param) const = 0;
 
-    /// Requests a resource to be loaded using the given function.
+	/// Requests a resource to be loaded using the given function.
+	/// @param[in] h resource storage handle to load into
+	/// @param[in] f a thread-safe loader function
 	/// @throw When input is invalid or loading is otherwise prevented.
 	/// @return Loading if loading began. Available if index is already in use.
-	virtual ResourceState request_resource(ResourceHandle h, std::function<boost::any()>) const = 0;
+	virtual ResourceState request_resource(ResourceHandle h, std::function<boost::any()> f) const = 0;
 
 	/// Tries to retrieve the resource with the specified handle.
-    /// Waits until the resource finishes loading if it is.
+	/// Waits until the resource finishes loading if it is.
+	/// @param[in] h storage handle of the requested resource
 	/// @return A read-lock on the resource or empty optional if resource is not currently Loading/Available.
 	virtual boost::optional<std::unique_ptr<IResourceLock>> retrieve_resource(ResourceHandle h) const = 0;
 
 	/// Queries the state of the resource.
+	/// @param[in] h storage handle of the queried resource
 	/// @return The queried state.
-    virtual ResourceState resource_state(ResourceHandle h) const = 0;
+	virtual ResourceState resource_state(ResourceHandle h) const = 0;
 
 	/// Frees the resource if it is Available. Stops loading and frees it if it is Loading. Blocks.
+	/// @param[in] h storage handle of the freed resource
 	/// @return What the state was before freeing.
-    virtual ResourceState free_resource(ResourceHandle h) const = 0;
+	virtual ResourceState free_resource(ResourceHandle h) const = 0;
 };
 } // namespace psi_serv

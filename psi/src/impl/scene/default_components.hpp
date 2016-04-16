@@ -24,35 +24,13 @@
 
 
 namespace psi_scene {
-/// The basic scene component, representing a single entity.
-/// Its fields are indices of other components which this entity comprises of,
-/// where a value of NO_COMPONENT indicates that the entity contains no such
-/// component. This component is special in the sense that removing it will
-/// also remove all components which it references, unless these components
-/// are also referenced by other entities.
-struct ComponentEntity {
-	ComponentId transform = NO_COMPONENT;
-	ComponentId model = NO_COMPONENT;
-
-	bool experiences_causality = false;
-};
-
-static ComponentTypeInfo component_type_entity_info = {
-	0b1,
-	sizeof(ComponentEntity),
-	{{}},
-	// TODO check this
-	{{{0b10, 0}, {0b100, sizeof(ComponentId)}}},
-	[](char* p)->boost::any{ return reinterpret_cast<ComponentEntity*>(p); },
-	[](char const* p)->boost::any{ return reinterpret_cast<ComponentEntity const*>(p); },
-	[](boost::any* a)->char* { return reinterpret_cast<char*>(boost::any_cast<ComponentEntity>(a)); },
-};
-
 /// A component representing the position, scale, and orientation of an entity
 /// in world space. This component is required for all entities which physically
 /// exist in the world.
 struct ComponentTransform {
-	ComponentId parent = NO_COMPONENT;
+	static constexpr ComponentTypeId type = 0b10;
+
+	ComponentHandle parent = NO_COMPONENT;
 
 	std::array<float, 3> pos;
 	std::array<float, 3> scale;
@@ -60,17 +38,27 @@ struct ComponentTransform {
 };
 
 static ComponentTypeInfo component_type_transform_info = {
-	0b10,
+	ComponentTransform::type,
 	sizeof(ComponentTransform),
-	{{{0b10, 0, false}}},
-	{{}},
-	[](char* p)->boost::any{ return reinterpret_cast<ComponentTransform*>(p); },
-	[](char const* p)->boost::any{ return reinterpret_cast<ComponentTransform const*>(p); },
-	[](boost::any* a)->char* { return reinterpret_cast<char*>(boost::any_cast<ComponentTransform>(a)); },
+	{{
+		{
+			ComponentRelationship::Type::REFERENCE,
+			ComponentTransform::type,
+			0,
+		},
+	}},
+	[] (char* p) -> boost::any {
+		return reinterpret_cast<ComponentTransform*>(p);
+	},
+	[] (boost::any a) -> char* {
+		return reinterpret_cast<char*>(boost::any_cast<ComponentTransform*>(a));
+	},
 };
 
 /// A component representing the resources needed to render the entity.
 struct ComponentModel {
+	static constexpr ComponentTypeId type = 0b100;
+
 	/// UTF-8
 	std::array<char, 512> mesh_name;
 	std::array<char, 512> albedo_tex;
@@ -79,12 +67,52 @@ struct ComponentModel {
 };
 
 static ComponentTypeInfo component_type_model_info = {
-	0b100,
+	ComponentModel::type,
 	sizeof(ComponentModel),
 	{{}},
-	{{}},
-	[](char* p)->boost::any{ return reinterpret_cast<ComponentModel*>(p); },
-	[](char const* p)->boost::any{ return reinterpret_cast<ComponentModel const*>(p); },
-	[](boost::any* a)->char* { return reinterpret_cast<char*>(boost::any_cast<ComponentModel>(a)); },
+	[] (char* p) -> boost::any {
+		return reinterpret_cast<ComponentModel*>(p);
+	},
+	[] (boost::any a) -> char* {
+		return reinterpret_cast<char*>(boost::any_cast<ComponentModel*>(a));
+	},
+};
+
+/// The basic scene component, representing a single entity.
+/// Its fields are indices of other components which this entity comprises of,
+/// where a value of NO_COMPONENT indicates that the entity contains no such
+/// component. This component is special in the sense that removing it will
+/// also remove all components which it references, unless these components
+/// are also referenced by other entities.
+struct ComponentEntity {
+	static constexpr ComponentTypeId type = 0b1;
+
+	ComponentHandle transform = NO_COMPONENT;
+	ComponentHandle model = NO_COMPONENT;
+
+	bool experiences_causality = 0;
+};
+
+static ComponentTypeInfo component_type_entity_info = {
+	ComponentEntity::type,
+	sizeof(ComponentEntity),
+	{{
+		{
+			ComponentRelationship::Type::OWNERSHIP,
+			ComponentTransform::type,
+			0,
+		},
+		{
+			ComponentRelationship::Type::OWNERSHIP,
+			ComponentModel::type,
+			sizeof(ComponentHandle),
+		},
+	}},
+	[] (char* p) -> boost::any {
+		return reinterpret_cast<ComponentEntity*>(p);
+	},
+	[] (boost::any a) -> char* {
+		return reinterpret_cast<char*>(boost::any_cast<ComponentEntity*>(a));
+	},
 };
 } // namespace psi_scene
